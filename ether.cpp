@@ -1,2 +1,0 @@
-//test.
-using namespace std

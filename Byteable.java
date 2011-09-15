@@ -1,0 +1,3 @@
+interface Byteable{
+    byte[] asBytes();
+}
