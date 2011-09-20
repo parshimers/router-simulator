@@ -1,6 +1,6 @@
 class MACAddress {
-    byte[] addr;
-    public MACAddress(byte[] addr){
+    short[] addr;
+    public MACAddress(short[] addr){
         addr = this.addr;
     }
 }
