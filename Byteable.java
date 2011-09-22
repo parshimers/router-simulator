@@ -1,3 +1,0 @@
-interface Byteable{
-    byte[] asBytes();
-}

@@ -1,6 +1,9 @@
 class MACAddress {
-    short[] addr;
-    public MACAddress(short[] addr){
+    long addr;
+    public MACAddress(long addr){
         addr = this.addr;
+    }
+    public MACAddress(){
+        addr = 0xffffffffffffL;
     }
 }
