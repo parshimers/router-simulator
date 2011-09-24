@@ -75,5 +75,7 @@ public class EtherFrame
     private void writeFCS(){
         fcs = computeFCS();
     } 
-
+    public short getType(){
+        return type;
+    }
 }
