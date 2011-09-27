@@ -4,7 +4,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Queue;
 
-class EtherSegment{
+class EtherPort{
     private InetAddress dstAddr;
     private InetAddress srcAddr;
     private DatagramSocket sock;
@@ -13,7 +13,7 @@ class EtherSegment{
     private int port= 4000;
     final private Queue<DatagramPacket> outQueue;
 
-    public EtherSegment(InetAddress srcAddr){
+    public EtherPort(InetAddress srcAddr){
         srcAddr = this.srcAddr;
         try{
             sock = new DatagramSocket(4000, srcAddr);
