@@ -5,7 +5,7 @@
 
 public class EtherFrame
 {
-        private MACAddress src;
+    private MACAddress src;
     private MACAddress dst;
     private short type;
     private byte[] data;

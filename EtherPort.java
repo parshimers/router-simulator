@@ -36,6 +36,7 @@ class EtherPort{
     }
     public void startConnection(){
         Thread EtherPort = new Thread (new Runnable() {
+         @Override
          public void run() { datagramDepot();}
         });
         EtherPort.start();
@@ -52,8 +53,8 @@ class EtherPort{
             try{
                  sock.receive(rcvd);
                  EtherFrame eth = parseDatagram(rcvd);
-                 EventRegistration evt = typeListen.get(eth.getType());
-                 if(evt != null) evt.frameRecieved(eth.asBytes());
+                 EventRegistration evt = typeListen.get(new EtherType(eth.getType()));
+                 if(evt != null) evt.frameReceived(eth.asBytes());
             }
             catch(IOException e){
                 System.out.println("fission mailed"); 
