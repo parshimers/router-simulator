@@ -1,9 +1,10 @@
 class MACAddress {
     long addr;
     public MACAddress(long addr){
-        addr = this.addr;
+        this.addr = addr;
     }
-    public MACAddress(byte[] addr){
+    public MACAddress(byte[] byteAddr){
+        addr = byteToLong(byteAddr);
     }
     private long byteToLong(byte[] ary){
         return
