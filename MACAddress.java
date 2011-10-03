@@ -3,6 +3,17 @@ class MACAddress {
     public MACAddress(long addr){
         addr = this.addr;
     }
+    public MACAddress(byte[] addr){
+    }
+    private long byteToLong(byte[] ary){
+        return
+        ((long)(ary[0] & 0xff) << 56) |
+        ((long)(ary[1] & 0xff) << 48) |
+        ((long)(ary[2] & 0xff) << 40) |
+        ((long)(ary[3] & 0xff) << 32) |
+        ((long)(ary[4] & 0xff) << 24) |
+        ((long)(ary[5] & 0xff) << 16);
+    }
     public MACAddress(){
         addr = 0xffffffffffffL;
     }

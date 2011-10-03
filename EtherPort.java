@@ -1,72 +1,107 @@
 import java.net.*;
 import java.io.*;
 import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.Queue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.Arrays;
 
 class EtherPort{
-    private InetAddress dstAddr;
-    private InetAddress srcAddr;
+    final private InetAddress dstAddr;
     private DatagramSocket sock;
     private HashMap<EtherType, EventRegistration> typeListen;
     private DatagramPacket rcvd;
-    private int port= 4000;
-    final private Queue<DatagramPacket> outQueue;
+    final private int port;
+    final private LinkedBlockingQueue<DatagramPacket> outQueue;
 
-    public EtherPort(InetAddress srcAddr){
-        srcAddr = this.srcAddr;
+    public EtherPort(InetAddress dstAddr, int port){
+        this.dstAddr = dstAddr;
+        this.port = port;
         try{
-            sock = new DatagramSocket(4000, srcAddr);
-            sock.connect(srcAddr, 4000);
+            sock = new DatagramSocket(port, dstAddr);
+            sock.connect(dstAddr, port);
         }
         catch(SocketException e){
-            //zzz
+            //and do nothing with it yet!
         }
-        outQueue = new LinkedList();
+        outQueue = new LinkedBlockingQueue<DatagramPacket>();
+        startConnection();
     }
-    //this is the class that starts a new thread to listen on a ethernet port
-    private EtherFrame parseDatagram(DatagramPacket pkt){
+    private EtherFrame parseDatagram(DatagramPacket pkt) throws IOException{
         //pick the packet apart
-        byte[] payload = {0,0,0};
-        return new EtherFrame(payload);
+        byte[] payload = pkt.getData();
+        ByteArrayInputStream bytes = new ByteArrayInputStream(payload);
+        DataInputStream payloadStream = new DataInputStream(bytes);
+        //ignore the first character
+        payloadStream.skipBytes(1);
+        byte[] dstBytes = new byte[6];
+        byte[] srcBytes = new byte[6];
+        payloadStream.read(dstBytes,0,6);
+        payloadStream.read(srcBytes,0,6);
+        MACAddress dst= new MACAddress(dstBytes);
+        MACAddress src= new MACAddress(srcBytes);
+        short type = (short)payloadStream.readUnsignedShort();
+        byte[] data=new byte[payload.length-24];
+        payloadStream.read(data,0,payload.length-24);
+        int fcs=payloadStream.readInt();
+        EtherFrame rcvdFrame;
+        if(payload[0] == (byte) 0x65){
+        }
+        rcvdFrame = new EtherFrame(src,dst,data,type);
+        //after FCS is complete
+        /*if(rcvdFrame.computeFCS() == fcs){
+            return rcvdFrame;
+        }
+        else throw new IOException("Corrupt frame");
+        */
+        return rcvdFrame;
     }
     public boolean addRegistration(short type, EventRegistration evt){
         typeListen.put(new EtherType(type), evt);
         return true;
     }
     public void startConnection(){
-        Thread EtherPort = new Thread (new Runnable() {
-         @Override
-         public void run() { datagramDepot();}
+        Thread txThread = new Thread (new Runnable() {
+         public void run() { recieveFrame();}
         });
-        EtherPort.start();
+        txThread.start();
+        Thread rxThread = new Thread (new Runnable() {
+         public void run() { sendFrame();}
+        });
+        rxThread.start();
     }
     public void enqueueFrame(EtherFrame eth){
         byte[] payload = eth.asBytes();
         DatagramPacket pkt = new DatagramPacket(payload, payload.length, dstAddr,
                                                 port);
-        outQueue.add(pkt);
+        outQueue.offer(pkt);
     }
-    private void datagramDepot(){
+    private void recieveFrame(){
         while(true){
           //see if we can recieve anything...
             try{
                  sock.receive(rcvd);
                  EtherFrame eth = parseDatagram(rcvd);
-                 EventRegistration evt = typeListen.get(new EtherType(eth.getType()));
+                 EventRegistration evt = typeListen.get(new EtherType(
+                                                                  eth.getType()));
                  if(evt != null) evt.frameReceived(eth.asBytes());
             }
             catch(IOException e){
-                System.out.println("fission mailed"); 
+                System.out.println("fission mailed");
                 return;
-            }
-            //send out the queued packets
-            DatagramPacket currpkt = outQueue.poll();
-            while(currpkt != null){
-                try{ sock.send(currpkt); }
-                catch(IOException e){ return; }
             }
         }
     }
-    
+    private void sendFrame(){
+        while(true){
+        DatagramPacket currpkt = outQueue.poll();
+            while(currpkt != null){
+                try{ sock.send(currpkt); }
+                catch(IOException e){ return; }
+                try{
+                    currpkt = outQueue.take();
+                }
+                catch(InterruptedException e){return;}
+            }
+        }
+    }
+
 }

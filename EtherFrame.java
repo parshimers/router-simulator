@@ -55,7 +55,7 @@ public class EtherFrame
     /**
         * Computes the Frame Check Sequence of the packet 
     */ 
-    private int computeFCS(){
+    public int computeFCS(){
         //this'll get done when he covers how to do CRC32
         return 0;
     }
