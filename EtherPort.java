@@ -2,10 +2,9 @@ import java.net.*;
 import java.io.*;
 import java.util.HashMap;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.Arrays;
 
 class EtherPort{
-    final private InetAddress dstAddr;
+    private InetAddress dstAddr;
     private DatagramSocket sock;
     private HashMap<EtherType, EventRegistration> typeListen;
     private DatagramPacket rcvd;
@@ -24,6 +23,21 @@ class EtherPort{
         }
         outQueue = new LinkedBlockingQueue<DatagramPacket>();
         startConnection();
+    }
+    public EtherPort(int port){
+        this.port=port;
+        try{
+            sock = new DatagramSocket(port);
+            dstAddr = null;
+            dstAddr = sock.getInetAddress();
+        }
+        catch(SocketException e){
+        }
+        catch(SecurityException e){
+        }
+        outQueue = new LinkedBlockingQueue<DatagramPacket>();
+        startConnection();
+
     }
     private EtherFrame parseDatagram(DatagramPacket pkt) throws IOException{
         //pick the packet apart
@@ -44,6 +58,7 @@ class EtherPort{
         int fcs=payloadStream.readInt();
         EtherFrame rcvdFrame;
         if(payload[0] == (byte) 0x65){
+            //stuff should go in here 
         }
         rcvdFrame = new EtherFrame(src,dst,data,type);
         //after FCS is complete
