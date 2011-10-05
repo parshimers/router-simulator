@@ -13,6 +13,7 @@ class EtherPort {
     //private VirtualNetMask vnm;
     private DatagramSocket sock;
     private HashMap<EtherType, EventRegistration> typeListen;
+    private boolean runThreads;
 
     public EtherPort(int port, InetAddress dstAddr, 
                      MACAddress virtualMAC /*, VirtualNetMask vnm */ ){
@@ -42,6 +43,11 @@ class EtherPort {
         }
         outQueue = new LinkedBlockingQueue<DatagramPacket>();
         startConnection();
+    }
+    public void switchCable(int port){
+        runThreads = false;
+        //do what we need to re-establish the UDP connection...
+        runThreads = true;
     }
     private EtherFrame parseDatagram(DatagramPacket pkt) throws IOException {
         //pick the packet apart
@@ -121,6 +127,7 @@ class EtherPort {
     }
     //making this private prevents "Overridable method in constructor" warning
     private void startConnection(){
+        runThreads = true;
         Thread receiveThread = new Thread (new Runnable() {
             @Override
             public void run() { receiveFrame(); }
@@ -141,7 +148,7 @@ class EtherPort {
     private void receiveFrame(){
         DatagramPacket rcvd = null;
         
-        while(true){
+        while(runThreads){
             //see if we can recieve anything...
             try{
                 sock.receive(rcvd);
@@ -159,7 +166,7 @@ class EtherPort {
         }
     }
     private void sendFrame(){
-        while(true){
+        while(runThreads){
             DatagramPacket currpkt = outQueue.poll();
             while(currpkt != null){
                 try{ sock.send(currpkt); }
