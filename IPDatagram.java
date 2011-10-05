@@ -1,4 +1,6 @@
+
 import java.net.InetAddress;
+
 public class IPDatagram{
     private final byte vers;
     private byte hlen;
@@ -31,7 +33,7 @@ public class IPDatagram{
         this.options = options;
         computeChecksum();
     }
-    public void computeChecksum(){
+    private void computeChecksum(){
         return;
 
     }

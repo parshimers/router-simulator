@@ -64,9 +64,7 @@ public class EtherFrame
         * pre-recorded value 
     */
     public boolean checkFCS(){
-        int newFCS = computeFCS();
-        if(newFCS == fcs) return true;
-        return false; 
+        return computeFCS() == fcs;
     } 
     /**
         * Writes the FCS for a newly created packet

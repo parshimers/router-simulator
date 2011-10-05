@@ -64,32 +64,47 @@ public class FlexByte {
 
 //Just for our own reference:
 //
-class Driver {
-    public static void main(String[] args) {
-         int leadingOne = 0xFF, leadingZero = 0x31;
-         FlexByte fb1 = new FlexByte( leadingOne, true );
-         FlexByte fb2 = new FlexByte( leadingZero, true );
-         System.out.println( "Signed FlexBytes: fb1 = " + fb1.getByteData() + "   fb2 = " + fb2.getByteData() ); 
-         FlexByte fb3 = new FlexByte( leadingOne, false );
-         FlexByte fb4 = new FlexByte( leadingZero, false );
-         System.out.println( "Unsigned FlexBytes: fb3 = " + fb3.getByteData() + "   fb4 = " + fb4.getByteData() );
-         System.out.println();
-         
-         FlexByte[] flexBytes = { fb1, fb2, fb3, fb4 };
-         byte[] bytes = FlexByte.toByteArray(flexBytes);
-         byte[] comparisonBits = { (byte) 0x80, (byte) 0x40, (byte) 0x20, (byte) 0x10,
-                                   (byte) 0x08, (byte) 0x04, (byte) 0x02, (byte) 0x01 };
-         for( byte b: bytes ) {
-             for( int i = 0; i < 8; i++ ) {
-                System.out.print( ((b & comparisonBits[i]) == comparisonBits[i]) + ",");
-             }
-             System.out.println();
-         }
-         System.out.println();
-         
-         long longNum = 0xffffffffffffL;
-         flexBytes = FlexByte.toFlexByteArray(longNum, 6, false);
-         for( FlexByte flex: flexBytes )
-             System.out.println( flex.getByteData() );
-    }
-}
+//class Driver {
+//    public static void main(String[] args) {
+//         int leadingOne = 0xFF, leadingZero = 0x31;
+//         FlexByte fb1 = new FlexByte( leadingOne, true );
+//         FlexByte fb2 = new FlexByte( leadingZero, true );
+//         System.out.println( "Signed FlexBytes: fb1 = " + fb1.getByteData() + "   fb2 = " + fb2.getByteData() ); 
+//         FlexByte fb3 = new FlexByte( leadingOne, false );
+//         FlexByte fb4 = new FlexByte( leadingZero, false );
+//         System.out.println( "Unsigned FlexBytes: fb3 = " + fb3.getByteData() + "   fb4 = " + fb4.getByteData() );
+//         System.out.println();
+//         
+//         FlexByte[] flexBytes = { fb1, fb2, fb3, fb4 };
+//         byte[] bytes = FlexByte.toByteArray(flexBytes);
+//         byte[] comparisonBits = { (byte) 0x80, (byte) 0x40, (byte) 0x20, (byte) 0x10,
+//                                   (byte) 0x08, (byte) 0x04, (byte) 0x02, (byte) 0x01 };
+//         for( byte b: bytes ) {
+//             for( int i = 0; i < 8; i++ ) {
+//                System.out.print( ((b & comparisonBits[i]) == comparisonBits[i]) + ",");
+//             }
+//             System.out.println();
+//         }
+//         System.out.println();
+//         
+//         long longNum = 0xffffffffffffL;
+//         flexBytes = FlexByte.toFlexByteArray(longNum, 6, false);
+//         for( FlexByte flex: flexBytes )
+//             System.out.println( flex.getByteData() );
+//        
+//        byte[] bytes = { (byte) 0xF0 };
+//        flipBits(bytes);
+//        System.out.println( bytes[0] );
+//    }
+//    
+//    private static void flipBits( byte[] bytes ) {
+//        for( int i = 0; i < bytes.length; i++ ) {
+//            byte oldByte = bytes[i];
+//            bytes[i] = (byte) ( ((oldByte & 0x01)<<7) | ((oldByte & 0x02)<<5) |
+//                                ((oldByte & 0x04)<<3) | ((oldByte & 0x08)<<1) |
+//                                ((oldByte & 0x10)>>1) | ((oldByte & 0x20)>>3) |
+//                                ((oldByte & 0x40)>>5) | ((oldByte & 0x80)>>7) );
+//        }
+//    }
+//   
+//}
