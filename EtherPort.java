@@ -5,35 +5,36 @@ import java.util.HashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 
 class EtherPort {
-    final private int virtualPort;
+    final private int port;
     final private LinkedBlockingQueue<DatagramPacket> outQueue;
     
-    private InetAddress virtualIP;
+    private InetAddress dstAddr;
     private MACAddress virtualMAC;
     //private VirtualNetMask vnm;
     private DatagramSocket sock;
     private HashMap<EtherType, EventRegistration> typeListen;
 
-    public EtherPort(int virtualPort, InetAddress virtualIP, 
+    public EtherPort(int port, InetAddress dstAddr, 
                      MACAddress virtualMAC /*, VirtualNetMask vnm */ ){
-        this.virtualIP = virtualIP;
-        this.virtualPort = virtualPort;
+        this.dstAddr = dstAddr;
+        this.port = port;
         this.virtualMAC = virtualMAC;
         /*this.vnm = vnm*/  //don't know what this is but eventually we'll need it
         try{
-            sock = new DatagramSocket(virtualPort, virtualIP);
+            sock = new DatagramSocket(port, dstAddr);
         }
         catch(SocketException e){
             System.out.println("Could not establish socket on local port " 
-                                + virtualPort);
+                                + port);
         }
         outQueue = new LinkedBlockingQueue<DatagramPacket>();
         startConnection();
     }
-    public EtherPort(int virtualPort){
-        this.virtualPort = virtualPort;
+    public EtherPort(int port, MACAddress virtualMAC){
+        this.virtualMAC = virtualMAC;
+        this.port = port;
         try{
-            sock = new DatagramSocket(virtualPort);
+            sock = new DatagramSocket(port);
         }
         catch(SocketException e){
         }
@@ -42,7 +43,7 @@ class EtherPort {
         outQueue = new LinkedBlockingQueue<DatagramPacket>();
         startConnection();
     }
-    private void parseDatagram(DatagramPacket pkt) throws IOException {
+    private EtherFrame parseDatagram(DatagramPacket pkt) throws IOException {
         //pick the packet apart
         byte[] payload = pkt.getData();
         ByteArrayInputStream bytes = new ByteArrayInputStream(payload);
@@ -91,7 +92,7 @@ class EtherPort {
             MACAddress dst = new MACAddress(dstBytes);
             if( !(dst.getLongAddress() == virtualMAC.getLongAddress() 
                   || dst.getLongAddress() == MACAddress.getBroadcastAddress()) )
-                return;     //packet wasn't meant for this port
+                return null;     //this isnt for us, toss it
             MACAddress src = new MACAddress(srcBytes);
             short type = (short) payloadStream.readUnsignedShort();
             byte[] data = new byte[dstToData.length-14];
@@ -104,14 +105,15 @@ class EtherPort {
             }
             else throw new IOException("Corrupt frame");
             */
-            //do whatever with data........
+            //right now we'll just return it without checking the CRC
+            return rcvdFrame;
             
         }
         //"Don't want to talk to you": flagChar == 'f'
         else if( (flagChar & 0x66) == 0x66 ) {
             
         }
-        
+        return null; 
     }
     public boolean addRegistration(short type, EventRegistration evt){
         typeListen.put(new EtherType(type), evt);
@@ -143,14 +145,13 @@ class EtherPort {
             //see if we can recieve anything...
             try{
                 sock.receive(rcvd);
-                parseDatagram(rcvd);
-                //seems like this can all be handled in parseDatagram()
-//                if( eth != null ) {
-//                    EventRegistration evt = typeListen.get(
-//                                               new EtherType(eth.getType()));
-//                    if(evt != null) 
-//                        evt.frameReceived(eth.asBytes());
-//                }
+                EtherFrame eth = parseDatagram(rcvd);
+                if( eth != null ) {
+                    EventRegistration evt = typeListen.get(
+                                               new EtherType(eth.getType()));
+                    if(evt != null) 
+                        evt.frameReceived(eth.asBytes());
+                }
             }
             catch(IOException e){
                 System.out.println("fission mailed");
@@ -162,13 +163,13 @@ class EtherPort {
             DatagramPacket currpkt = outQueue.poll();
             while(currpkt != null){
                 try{ sock.send(currpkt); }
-                catch(IOException e){ /*maybe set a flag as warning that
-                                        transmission failed. Probably 
-                                        shouldn't return as this will kill
-                                        any future sends.*/ }
-                
+                catch(IOException e){ 
+                    //handle this properly later
+                }
                 try{ currpkt = outQueue.take(); }
-                catch(InterruptedException e){ /*same as above catch*/ }
+                catch(InterruptedException e){ 
+                    //ditto
+                }
             }
         }
     }
