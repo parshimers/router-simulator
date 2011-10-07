@@ -5,7 +5,7 @@ import java.util.HashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 
 class EtherPort {
-    final private int port;
+    private int port;
     final private LinkedBlockingQueue<DatagramPacket> outQueue;
     final private RouterHook router; 
     private InetAddress dstAddr;
@@ -29,10 +29,23 @@ class EtherPort {
         outQueue = new LinkedBlockingQueue<DatagramPacket>();
         startConnection();
     }
-    public void switchCable(int port){
+    public void stopThreads(){
         runThreads = false;
-        //do what we need to re-establish the UDP connection...
-        runThreads = true;
+        while(outQueue.peek() != null) { } //wait to send everything
+        sock.disconnect(); 
+    }
+    public void startThreads(){
+        runThreads=true;
+        // sock.connect()? later. 
+    }
+    public void setDest(InetAddress dstAddr){
+        if( dstAddr == null && outQueue.size()==0){
+            this.dstAddr=dstAddr;
+        }
+    }
+    public boolean haveEndpoint(){
+        if(dstAddr == null) return true;
+        else return false;
     }
     private char parseDatagram(DatagramPacket pkt) {
         //pick the packet apart
@@ -127,6 +140,12 @@ class EtherPort {
                                                 dstAddr, dstPort);
         outQueue.offer(pkt);
     }
+    public void enqueueCommand(char cmd, InetAddress dstAddr, int dstPort){
+        byte[] payload = new byte[1];
+        payload[0]= (byte) cmd;
+        DatagramPacket pkt = new DatagramPacket(payload, 1, dstAddr, dstPort);
+        outQueue.offer(pkt);
+    }
     private void receiveFrame(){
         DatagramPacket rcvd = null;
         
@@ -141,7 +160,8 @@ class EtherPort {
                     if(evt != null) 
                         evt.frameReceived(eth.asBytes());
                 }
-                else router.commandRcvd(parseDatagram(rcvd));
+                else router.commandRcvd(parseDatagram(rcvd), rcvd.getAddress(),
+                                        rcvd.getPort());
             }
             catch(IOException e){
                 System.out.println("fission mailed");
