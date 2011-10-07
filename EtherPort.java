@@ -7,7 +7,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 class EtherPort {
     final private int port;
     final private LinkedBlockingQueue<DatagramPacket> outQueue;
-    
+    final private RouterHook router; 
     private InetAddress dstAddr;
     private MACAddress virtualMAC;
     //private VirtualNetMask vnm;
@@ -15,23 +15,8 @@ class EtherPort {
     private HashMap<EtherType, EventRegistration> typeListen;
     private boolean runThreads;
 
-    public EtherPort(int port, InetAddress dstAddr, 
-                     MACAddress virtualMAC /*, VirtualNetMask vnm */ ){
-        this.dstAddr = dstAddr;
-        this.port = port;
-        this.virtualMAC = virtualMAC;
-        /*this.vnm = vnm*/  //don't know what this is but eventually we'll need it
-        try{
-            sock = new DatagramSocket(port, dstAddr);
-        }
-        catch(SocketException e){
-            System.out.println("Could not establish socket on local port " 
-                                + port);
-        }
-        outQueue = new LinkedBlockingQueue<DatagramPacket>();
-        startConnection();
-    }
-    public EtherPort(int port, MACAddress virtualMAC){
+    public EtherPort(int port, MACAddress virtualMAC, RouterHook router){
+        this.router = router;
         this.virtualMAC = virtualMAC;
         this.port = port;
         try{
@@ -49,81 +34,78 @@ class EtherPort {
         //do what we need to re-establish the UDP connection...
         runThreads = true;
     }
-    private EtherFrame parseDatagram(DatagramPacket pkt) throws IOException {
+    private char parseDatagram(DatagramPacket pkt) {
         //pick the packet apart
         byte[] payload = pkt.getData();
-        ByteArrayInputStream bytes = new ByteArrayInputStream(payload);
-        DataInputStream payloadStream = new DataInputStream(bytes);
-        
-        //get first char (the signal), then skip over it in the stream
         byte flagChar = payload[0];
-        payloadStream.skipBytes(1);
         
         //"Accept": flagChar == 'a' 
         if( (flagChar & 0x61) == 0x61 ) {
-            
+            return 'a';
         }
         //"Bye": flagChar == 'b'
         else if( (flagChar & 0x62) == 0x62 ) {
-            
+            return 'b';
         }
         //"Connect": flagChar == 'c'
         else if( (flagChar & 0x63) == 0x63 ) {
-            
+            return 'c';
         }
         //"Disconnect": flagChar == 'd'
         else if( (flagChar & 0x64) == 0x64 ) {
-            
+            return 'd';
         }
         //"Ethernet frame": flagChar == 'e'
         else if( (flagChar & 0x65) == 0x65 ) {
-            //dstToData will store all bytes in the virtual ethernet frame from
-            //destination MAC up to and including the end of the data.
-            //Subtract 8 bytes for preamble/SFD, 4 for CRC, and 1 for 'e'.
-            byte[] dstToData = new byte[payload.length - 8 - 4 -1];
-            //ignore the first 8 bytes of preamble, SFD
-            payloadStream.skipBytes(8);
-            payloadStream.read(dstToData, 0, dstToData.length);
-            int fcs = payloadStream.readInt();
-            //flip all bits except for CRC
-            flipBits(dstToData);
-            
-            bytes = new ByteArrayInputStream(dstToData);
-            payloadStream = new DataInputStream(bytes);
-            
-            byte[] dstBytes = new byte[6];
-            byte[] srcBytes = new byte[6];
-            payloadStream.read(dstBytes,0,6);
-            payloadStream.read(srcBytes,0,6);
-            MACAddress dst = new MACAddress(dstBytes);
-            if( !(dst.getLongAddress() == virtualMAC.getLongAddress() 
-                  || dst.getLongAddress() == MACAddress.getBroadcastAddress()) )
-                return null;     //this isnt for us, toss it
-            MACAddress src = new MACAddress(srcBytes);
-            short type = (short) payloadStream.readUnsignedShort();
-            byte[] data = new byte[dstToData.length-14];
-            payloadStream.read(data,0,data.length);
-            
-            EtherFrame rcvdFrame = new EtherFrame(src,dst,data,type);
-            //after FCS is complete
-            /*if(rcvdFrame.computeFCS() == fcs){
-                return rcvdFrame;
-            }
-            else throw new IOException("Corrupt frame");
-            */
-            //right now we'll just return it without checking the CRC
-            return rcvdFrame;
-            
+            return 'e';
         }
         //"Don't want to talk to you": flagChar == 'f'
         else if( (flagChar & 0x66) == 0x66 ) {
-            
+            return 'f';
         }
-        return null; 
+        return 'E';
     }
     public boolean addRegistration(short type, EventRegistration evt){
         typeListen.put(new EtherType(type), evt);
         return true;
+    }
+    public EtherFrame parseFrame(byte[] payload) throws IOException{
+        //dstToData will store all bytes in the virtual ethernet frame from
+        //destination MAC up to and including the end of the data.
+        //Subtract 8 bytes for preamble/SFD, 4 for CRC, and 1 for 'e'.
+        ByteArrayInputStream  bytes = new ByteArrayInputStream(payload);
+         DataInputStream payloadStream = new DataInputStream(bytes);
+         byte[] dstToData = new byte[payload.length - 8 - 4 -1];
+        //ignore the first 8 bytes of preamble, SFD
+        payloadStream.skipBytes(8);
+        payloadStream.read(dstToData, 0, dstToData.length);
+        int fcs = payloadStream.readInt();
+        //flip all bits except for CRC
+        flipBits(dstToData);
+        bytes = new ByteArrayInputStream(dstToData);
+        payloadStream = new DataInputStream(bytes);
+        byte[] dstBytes = new byte[6];
+        byte[] srcBytes = new byte[6];
+        payloadStream.read(dstBytes,0,6);
+        payloadStream.read(srcBytes,0,6);
+        MACAddress dst = new MACAddress(dstBytes);
+        if( !(dst.getLongAddress() == virtualMAC.getLongAddress() 
+            || dst.getLongAddress() == MACAddress.getBroadcastAddress()) )
+            return null;     //this isnt for us, toss it
+        MACAddress src = new MACAddress(srcBytes);
+        short type = (short) payloadStream.readUnsignedShort();
+        byte[] data = new byte[dstToData.length-14];
+        payloadStream.read(data,0,data.length);
+    
+        EtherFrame rcvdFrame = new EtherFrame(src,dst,data,type);
+        //after FCS is complete
+        /*if(rcvdFrame.computeFCS() == fcs){
+            return rcvdFrame;
+        }
+        else throw new IOException("Corrupt frame");
+        */
+        //right now we'll just return it without checking the CRC
+        return rcvdFrame; 
     }
     //making this private prevents "Overridable method in constructor" warning
     private void startConnection(){
@@ -152,13 +134,14 @@ class EtherPort {
             //see if we can recieve anything...
             try{
                 sock.receive(rcvd);
-                EtherFrame eth = parseDatagram(rcvd);
-                if( eth != null ) {
+                if( parseDatagram(rcvd) == 'e') {
+                    EtherFrame eth = parseFrame(rcvd.getData());
                     EventRegistration evt = typeListen.get(
                                                new EtherType(eth.getType()));
                     if(evt != null) 
                         evt.frameReceived(eth.asBytes());
                 }
+                else router.commandRcvd(parseDatagram(rcvd));
             }
             catch(IOException e){
                 System.out.println("fission mailed");
