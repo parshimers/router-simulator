@@ -5,8 +5,8 @@
 
 public class EtherFrame
 {
-    private MACAddress src;
     private MACAddress dst;
+    private MACAddress src;
     private short type;
     private byte[] data;
     private int fcs;
@@ -15,10 +15,10 @@ public class EtherFrame
         * @param data The frame's data payload.
     */
     public EtherFrame(byte[] data){
-        data = this.data;
-        src = new MACAddress(0L);
         dst = new MACAddress();
+        src = new MACAddress(0L);
         type = 0x800;
+        data = this.data;
         //fcs later
     }
     /**
@@ -27,11 +27,11 @@ public class EtherFrame
         * @param dst The destination of the frame
         * @param data The frame's data payload.      
     */
-    public EtherFrame(MACAddress src, MACAddress dst, byte[] data){
-        this.src = src;
+    public EtherFrame(MACAddress dst, MACAddress src, byte[] data){
         this.dst = dst;
-        this.data = data;
+        this.src = src;
         type = 0x800;
+        this.data = data;
     }
     /**
         * This constructor allows the ethernet frame type to be specified
@@ -40,11 +40,11 @@ public class EtherFrame
         * @param data The frame's data payload.      
         * @param type The frame's EtherType. 
     */
-    public EtherFrame(MACAddress src, MACAddress dst, byte[] data, short type){
-        this.src = src;
+    public EtherFrame(MACAddress dst, MACAddress src, short type, byte[] data){
         this.dst = dst;
-        this.data = data;
+        this.src = src;
         this.type = type;
+        this.data = data;
     }
     /**
         * This method simply returns the data payload of the frame 

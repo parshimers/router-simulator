@@ -5,18 +5,19 @@ import java.util.HashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 
 class EtherPort {
-    private int port;
     final private LinkedBlockingQueue<DatagramPacket> outQueue;
-    final private RouterHook router; 
-    private InetAddress dstAddr;
+    final private RouterHook routerHook;
+    
+    private int port; 
+    private InetAddress ip, dstAddr;
     private MACAddress virtualMAC;
     //private VirtualNetMask vnm;
     private DatagramSocket sock;
     private HashMap<EtherType, EventRegistration> typeListen;
     private boolean runThreads;
 
-    public EtherPort(int port, MACAddress virtualMAC, RouterHook router){
-        this.router = router;
+    public EtherPort(int port, MACAddress virtualMAC, RouterHook routerHook){
+        this.routerHook = routerHook;
         this.virtualMAC = virtualMAC;
         this.port = port;
         try{
@@ -25,6 +26,24 @@ class EtherPort {
         catch(SocketException e){
         }
         catch(SecurityException e){
+        }
+        outQueue = new LinkedBlockingQueue<DatagramPacket>();
+        startConnection();
+    }
+    public EtherPort(int port, InetAddress ip, 
+                     MACAddress virtualMAC, RouterHook routerHook 
+                                            /*, VirtualNetMask vnm */ ){
+        this.port = port;
+        this.ip = ip;
+        this.virtualMAC = virtualMAC;
+        this.routerHook = routerHook;
+        /*this.vnm = vnm*/  //don't know what this is but eventually we'll need it
+        try{
+            sock = new DatagramSocket(port, ip);
+        }
+        catch(SocketException e){
+            System.out.println("Could not establish socket on local port " 
+                                + port);
         }
         outQueue = new LinkedBlockingQueue<DatagramPacket>();
         startConnection();
@@ -39,13 +58,12 @@ class EtherPort {
         // sock.connect()? later. 
     }
     public void setDest(InetAddress dstAddr){
-        if( dstAddr == null && outQueue.size()==0){
+        if( dstAddr == null && outQueue.size()==0 ){
             this.dstAddr=dstAddr;
         }
     }
     public boolean haveEndpoint(){
-        if(dstAddr == null) return true;
-        else return false;
+        return dstAddr == null;
     }
     private char parseDatagram(DatagramPacket pkt) {
         //pick the packet apart
@@ -110,7 +128,7 @@ class EtherPort {
         byte[] data = new byte[dstToData.length-14];
         payloadStream.read(data,0,data.length);
     
-        EtherFrame rcvdFrame = new EtherFrame(src,dst,data,type);
+        EtherFrame rcvdFrame = new EtherFrame(dst,src,type,data);
         //after FCS is complete
         /*if(rcvdFrame.computeFCS() == fcs){
             return rcvdFrame;
@@ -160,8 +178,9 @@ class EtherPort {
                     if(evt != null) 
                         evt.frameReceived(eth.asBytes());
                 }
-                else router.commandRcvd(parseDatagram(rcvd), rcvd.getAddress(),
-                                        rcvd.getPort());
+                else routerHook.commandRcvd(parseDatagram(rcvd), 
+                                            rcvd.getAddress(),
+                                            rcvd.getPort());
             }
             catch(IOException e){
                 System.out.println("fission mailed");
