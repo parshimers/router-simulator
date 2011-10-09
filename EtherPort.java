@@ -6,8 +6,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 class EtherPort {
     final private LinkedBlockingQueue<DatagramPacket> outQueue;
-    final private RouterHook routerHook;
-    
+    private RouterHook routerHook;
     private int port; 
     private InetAddress ip, dstAddr;
     private MACAddress virtualMAC;
@@ -165,7 +164,8 @@ class EtherPort {
         outQueue.offer(pkt);
     }
     private void receiveFrame(){
-        DatagramPacket rcvd = null;
+        byte[] buf = new byte[1600]; //i dont want this static but itll do for now
+        DatagramPacket rcvd = new DatagramPacket(buf,buf.length);
         
         while(runThreads){
             //see if we can recieve anything...
@@ -178,7 +178,8 @@ class EtherPort {
                     if(evt != null) 
                         evt.frameReceived(eth.asBytes());
                 }
-                else routerHook.commandRcvd(parseDatagram(rcvd), 
+                else //System.out.println("pong");
+                     routerHook.commandRcvd(parseDatagram(rcvd), 
                                             rcvd.getAddress(),
                                             rcvd.getPort());
             }
