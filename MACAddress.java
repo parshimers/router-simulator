@@ -1,6 +1,7 @@
 
 public class MACAddress {
-    long addr;
+    //Our prefix = E1
+    private long addr;
     
     public MACAddress(long addr){
         this.addr = addr;

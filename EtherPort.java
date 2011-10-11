@@ -7,20 +7,21 @@ import java.util.concurrent.LinkedBlockingQueue;
 class EtherPort {
     final private LinkedBlockingQueue<DatagramPacket> outQueue;
     private RouterHook routerHook;
-    private int port; 
-    private InetAddress ip, dstAddr;
+    private int localRealPort; 
+    private InetAddress localRealIP, dstAddr;
     private MACAddress virtualMAC;
     //private VirtualNetMask vnm;
     private DatagramSocket sock;
     private HashMap<EtherType, EventRegistration> typeListen;
     private boolean runThreads;
 
-    public EtherPort(int port, MACAddress virtualMAC, RouterHook routerHook){
+    public EtherPort(int localRealPort, MACAddress virtualMAC, 
+                                        RouterHook routerHook){
         this.routerHook = routerHook;
         this.virtualMAC = virtualMAC;
-        this.port = port;
+        this.localRealPort = localRealPort;
         try{
-            sock = new DatagramSocket(port);
+            sock = new DatagramSocket(localRealPort);
         }
         catch(SocketException e){
         }
@@ -29,20 +30,20 @@ class EtherPort {
         outQueue = new LinkedBlockingQueue<DatagramPacket>();
         startConnection();
     }
-    public EtherPort(int port, InetAddress ip, 
+    public EtherPort(int localRealPort, InetAddress localRealIP, 
                      MACAddress virtualMAC, RouterHook routerHook 
                                             /*, VirtualNetMask vnm */ ){
-        this.port = port;
-        this.ip = ip;
+        this.localRealPort = localRealPort;
+        this.localRealIP = localRealIP;
         this.virtualMAC = virtualMAC;
         this.routerHook = routerHook;
         /*this.vnm = vnm*/  //don't know what this is but eventually we'll need it
         try{
-            sock = new DatagramSocket(port, ip);
+            sock = new DatagramSocket(localRealPort, localRealIP);
         }
         catch(SocketException e){
             System.out.println("Could not establish socket on local port " 
-                                + port);
+                                + localRealPort);
         }
         outQueue = new LinkedBlockingQueue<DatagramPacket>();
         startConnection();
