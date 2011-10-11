@@ -8,7 +8,7 @@ class EtherPort {
     final private LinkedBlockingQueue<DatagramPacket> outQueue;
     private RouterHook routerHook;
     private int localRealPort; 
-    private InetAddress localRealIP, dstAddr;
+    private InetAddress localIP, dstAddr;
     private MACAddress virtualMAC;
     //private VirtualNetMask vnm;
     private DatagramSocket sock;
@@ -24,22 +24,25 @@ class EtherPort {
             sock = new DatagramSocket(localRealPort);
         }
         catch(SocketException e){
+            System.out.println("Could not establish socket on local port " 
+                                + localRealPort);
         }
         catch(SecurityException e){
+            System.out.println("Security exception establishing socket on local port " + localRealPort);
         }
         outQueue = new LinkedBlockingQueue<DatagramPacket>();
         startConnection();
     }
-    public EtherPort(int localRealPort, InetAddress localRealIP, 
+    public EtherPort(int localRealPort, InetAddress localIP, 
                      MACAddress virtualMAC, RouterHook routerHook 
                                             /*, VirtualNetMask vnm */ ){
         this.localRealPort = localRealPort;
-        this.localRealIP = localRealIP;
+        this.localIP = localIP;
         this.virtualMAC = virtualMAC;
         this.routerHook = routerHook;
         /*this.vnm = vnm*/  //don't know what this is but eventually we'll need it
         try{
-            sock = new DatagramSocket(localRealPort, localRealIP);
+            sock = new DatagramSocket(localRealPort, localIP);
         }
         catch(SocketException e){
             System.out.println("Could not establish socket on local port " 
@@ -54,12 +57,12 @@ class EtherPort {
         sock.disconnect(); 
     }
     public void startThreads(){
-        runThreads=true;
+        runThreads = true;
         // sock.connect()? later. 
     }
     public void setDest(InetAddress dstAddr){
         if( dstAddr == null && outQueue.size()==0 ){
-            this.dstAddr=dstAddr;
+            this.dstAddr = dstAddr;
         }
     }
     public boolean haveEndpoint(){
@@ -68,33 +71,33 @@ class EtherPort {
     private char parseDatagram(DatagramPacket pkt) {
         //pick the packet apart
         byte[] payload = pkt.getData();
-        byte flagChar = payload[0];
+        return (char) payload[0];   //this seems more efficient than code below
         
-        //"Accept": flagChar == 'a' 
-        if( (flagChar & 0x61) == 0x61 ) {
-            return 'a';
-        }
-        //"Bye": flagChar == 'b'
-        else if( (flagChar & 0x62) == 0x62 ) {
-            return 'b';
-        }
-        //"Connect": flagChar == 'c'
-        else if( (flagChar & 0x63) == 0x63 ) {
-            return 'c';
-        }
-        //"Disconnect": flagChar == 'd'
-        else if( (flagChar & 0x64) == 0x64 ) {
-            return 'd';
-        }
-        //"Ethernet frame": flagChar == 'e'
-        else if( (flagChar & 0x65) == 0x65 ) {
-            return 'e';
-        }
-        //"Don't want to talk to you": flagChar == 'f'
-        else if( (flagChar & 0x66) == 0x66 ) {
-            return 'f';
-        }
-        return 'E';
+//        //"Accept": flagChar == 'a' 
+//        if( (flagChar & 0x61) == 0x61 ) {
+//            return 'a';
+//        }
+//        //"Bye": flagChar == 'b'
+//        else if( (flagChar & 0x62) == 0x62 ) {
+//            return 'b';
+//        }
+//        //"Connect": flagChar == 'c'
+//        else if( (flagChar & 0x63) == 0x63 ) {
+//            return 'c';
+//        }
+//        //"Disconnect": flagChar == 'd'
+//        else if( (flagChar & 0x64) == 0x64 ) {
+//            return 'd';
+//        }
+//        //"Ethernet frame": flagChar == 'e'
+//        else if( (flagChar & 0x65) == 0x65 ) {
+//            return 'e';
+//        }
+//        //"Don't want to talk to you": flagChar == 'f'
+//        else if( (flagChar & 0x66) == 0x66 ) {
+//            return 'f';
+//        }
+//        return 'X';
     }
     public boolean addRegistration(short type, EventRegistration evt){
         typeListen.put(new EtherType(type), evt);
@@ -172,17 +175,20 @@ class EtherPort {
             //see if we can recieve anything...
             try{
                 sock.receive(rcvd);
-                if( parseDatagram(rcvd) == 'e') {
+                char flag = parseDatagram(rcvd);
+                if( flag == 'e') {
                     EtherFrame eth = parseFrame(rcvd.getData());
                     EventRegistration evt = typeListen.get(
                                                new EtherType(eth.getType()));
                     if(evt != null) 
                         evt.frameReceived(eth.asBytes());
                 }
-                else //System.out.println("pong");
-                     routerHook.commandRcvd(parseDatagram(rcvd), 
-                                            rcvd.getAddress(),
-                                            rcvd.getPort());
+                else {
+                    TestDriver.iGotAPacket(flag);
+                    routerHook.commandRcvd(flag, 
+                                           rcvd.getAddress(),
+                                           rcvd.getPort());
+                }
             }
             catch(IOException e){
                 System.out.println("fission mailed");
@@ -213,4 +219,13 @@ class EtherPort {
                                 ((oldByte & 0x40)>>5) | ((oldByte & 0x80)>>7) );
         }
     }
+    
+    public void setLocalIP( InetAddress localIP ) {
+        this.localIP = localIP;
+    }
+    
+//    public void setVirtualNetMask( VirtualNetMask vnm ) {
+//        this.vnm = vnm;
+//    }
+    
 }

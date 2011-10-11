@@ -47,7 +47,8 @@ public class Router implements RouterHook {
     }
     
     public void listen( int localVirtualPort, int localRealPort ) {
-        if( ports.get(localVirtualPort) != null ) {
+        if( localVirtualPort <= ports.size()-1 
+              && ports.get(localVirtualPort) != null ) {
             //gracefully destory ports.get(localVirtualPort) here (stop threads, etc.)
             ports.set(localVirtualPort, null);
         }
@@ -76,29 +77,15 @@ public class Router implements RouterHook {
         ports.set(localVirtualPort, null);
     }
     
-    //Calling this autogenerates a virtual IP and virtual MAC address for
-    //the port. Not sure about net mask!!!
-//    public int ip() {
-//        InetAddress localVirtualIP = null;
-//        try {
-//            localVirtualIP = InetAddress.getByName( IP_PREFIX + getNextIpSuffix() );
-//        } catch( Exception e ) {}
-//        
-//        ports.add( new EtherPort(nextPortNum++, 
-//                                 localVirtualIP,
-//                                 new MACAddress(nextMacLong++),
-//                                 this) );
-//        
-//        return ports.size()-1;
-//    }
-    
-    public void ip( int localVirtualPort, InetAddress localVirtualIP
+    public void ip( int localVirtualPort, InetAddress localIP
                     /*, VirtualNetMask vnm */ ) {
-        ports.add( new EtherPort(localVirtualPort, 
-                                 localVirtualIP,
-                                 new MACAddress(nextMacLong++),
-                                 this
-                                 /*, vnm */) );
+        ports.get(localVirtualPort).setLocalIP(localIP);
+        //ports.get(localVirtualPort).setVirtualNetMask(vnm);
+    }
+    
+    public void stopAll() {
+        for(EtherPort e: ports)
+            e.stopThreads();
     }
     
 }
