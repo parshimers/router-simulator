@@ -28,7 +28,8 @@ class EtherPort {
                                 + localRealPort);
         }
         catch(SecurityException e){
-            System.out.println("Security exception establishing socket on local port " + localRealPort);
+            System.out.println("Security exception establishing socket "
+                               + "on local port " + localRealPort);
         }
         outQueue = new LinkedBlockingQueue<DatagramPacket>();
         startConnection();
@@ -69,7 +70,6 @@ class EtherPort {
         return dstAddr == null;
     }
     private char parseDatagram(DatagramPacket pkt) {
-        //pick the packet apart
         byte[] payload = pkt.getData();
         return (char) payload[0];   //this seems more efficient than code below
         
@@ -108,8 +108,8 @@ class EtherPort {
         //destination MAC up to and including the end of the data.
         //Subtract 8 bytes for preamble/SFD, 4 for CRC, and 1 for 'e'.
         ByteArrayInputStream  bytes = new ByteArrayInputStream(payload);
-         DataInputStream payloadStream = new DataInputStream(bytes);
-         byte[] dstToData = new byte[payload.length - 8 - 4 -1];
+        DataInputStream payloadStream = new DataInputStream(bytes);
+        byte[] dstToData = new byte[payload.length - 8 - 4 -1];
         //ignore the first 8 bytes of preamble, SFD
         payloadStream.skipBytes(8);
         payloadStream.read(dstToData, 0, dstToData.length);
@@ -168,13 +168,14 @@ class EtherPort {
         outQueue.offer(pkt);
     }
     private void receiveFrame(){
-        byte[] buf = new byte[1600]; //i dont want this static but itll do for now
-        DatagramPacket rcvd = new DatagramPacket(buf,buf.length);
+        DatagramPacket rcvd = null;
         
         while(runThreads){
             //see if we can recieve anything...
             try{
                 sock.receive(rcvd);
+                if( rcvd == null )
+                    continue;
                 char flag = parseDatagram(rcvd);
                 if( flag == 'e') {
                     EtherFrame eth = parseFrame(rcvd.getData());
@@ -184,7 +185,6 @@ class EtherPort {
                         evt.frameReceived(eth.asBytes());
                 }
                 else {
-                    TestDriver.iGotAPacket(flag);
                     routerHook.commandRcvd(flag, 
                                            rcvd.getAddress(),
                                            rcvd.getPort());

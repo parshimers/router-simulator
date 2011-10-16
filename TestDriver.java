@@ -10,7 +10,7 @@ public class TestDriver {
             router.connect(0, InetAddress.getByName("192.168.5.241"), 4000);
         } catch(Exception e) {}
     
-        router.stopAll();
+        router.stopAllPorts();
     }
   */
   
@@ -25,7 +25,7 @@ public class TestDriver {
         while( !proceed )
             ;  //just wait
         
-        router.stopAll();      
+        router.stopAllPorts();      
     }
     
     private static boolean proceed = false;

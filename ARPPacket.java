@@ -14,6 +14,43 @@ public class ARPPacket{
     private MACAddress tha;
     private InetAddress tpa;
     
+    public ARPPacket(byte[] frameBytes) {
+        
+        htype = (short) ((frameBytes[1] << 8) & frameBytes[0]);
+        ptype = (short) ((frameBytes[3] << 8) & frameBytes[2]);
+        hlen = frameBytes[4];
+        plen = frameBytes[5];
+        oper = (short) ((frameBytes[7] << 8) & frameBytes[6]);
+        
+        byte[] shaBytes = new byte[6];
+        System.arraycopy(frameBytes, 8, shaBytes, 0, 6);
+        sha = new MACAddress(shaBytes);
+        
+        //InetAddress.getByAddress requires that the bytes be in reverse order
+        //(but nothing changes with the bits)
+        byte[] spaBytes = new byte[4];
+        spaBytes[0] = frameBytes[17];
+        spaBytes[1] = frameBytes[16];
+        spaBytes[2] = frameBytes[15];
+        spaBytes[3] = frameBytes[14];
+        try {
+            spa = InetAddress.getByAddress(spaBytes);
+        } catch(Exception e) {}
+        
+        byte[] thaBytes = new byte[6];
+        System.arraycopy(frameBytes, 18, thaBytes, 0, 6);
+        sha = new MACAddress(thaBytes);
+        
+        byte[] tpaBytes = new byte[4];
+        tpaBytes[0] = frameBytes[27];
+        tpaBytes[1] = frameBytes[26];
+        tpaBytes[2] = frameBytes[25];
+        tpaBytes[3] = frameBytes[24];
+        try {
+            tpa = InetAddress.getByAddress(tpaBytes);
+        } catch(Exception e) {}
+        
+    }
     public ARPPacket(MACAddress sha, InetAddress spa, InetAddress tpa){
         this.sha = sha;
         this.spa = spa;
@@ -28,10 +65,6 @@ public class ARPPacket{
         this.tpa = tpa;
         oper = RESPONSE;
     }
-    public MACAddress getSHA(){return sha;}
-    public InetAddress getSPA(){return spa;}
-    public MACAddress getTHA(){return tha;}
-    public InetAddress getTPA(){return tpa;}
     
     public byte[] toByteArray() {
         byte[] bytes = new byte[28];
@@ -62,4 +95,10 @@ public class ARPPacket{
                
         return bytes;
     }
+    
+    public int getOper(){return oper;};
+    public MACAddress getSHA(){return sha;}
+    public InetAddress getSPA(){return spa;}
+    public MACAddress getTHA(){return tha;}
+    public InetAddress getTPA(){return tpa;}
 }

@@ -3,7 +3,7 @@ import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-public class Router implements RouterHook {
+public class Router extends Thread implements RouterHook {
     
     private ArrayList<EtherPort> ports;
     private ARP_Engine arpEngine;
@@ -11,8 +11,6 @@ public class Router implements RouterHook {
     private int nextPortNum, nextIpSuffix;
     private long nextMacLong;
 
-    //Actually, maybe we should get rid of a size limit on the number of
-    //ports, unless there's a good reason to keep it (memory issues, network bandwith maybe?)
     public Router( int numPorts ) {
         nextPortNum = 4000;
         nextIpSuffix = 0x0001;
@@ -22,7 +20,7 @@ public class Router implements RouterHook {
     }
     
     @Override
-    public void commandRcvd(char cmd, InetAddress from, int port) {
+    public void commandRcvd(char cmd, InetAddress ipRcvd, int portRcvd) {
         
     }
     
@@ -47,9 +45,11 @@ public class Router implements RouterHook {
     }
     
     public void listen( int localVirtualPort, int localRealPort ) {
+        //Gracefully stop and dereference the EtherPort currently at
+        //index localVirtualPort
         if( localVirtualPort <= ports.size()-1 
               && ports.get(localVirtualPort) != null ) {
-            //gracefully destory ports.get(localVirtualPort) here (stop threads, etc.)
+            ports.get(localVirtualPort).stopThreads();
             ports.set(localVirtualPort, null);
         }
         
@@ -83,7 +83,7 @@ public class Router implements RouterHook {
         //ports.get(localVirtualPort).setVirtualNetMask(vnm);
     }
     
-    public void stopAll() {
+    public void stopAllPorts() {
         for(EtherPort e: ports)
             e.stopThreads();
     }
