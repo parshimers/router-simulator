@@ -22,6 +22,7 @@ public class ARP_Engine implements EventRegistration {
                     //remove item from the queue. 
                     ARPPacket frontItem = outQueue.peek();
                     InetAddress tpa = frontItem.getTPA();
+                    
                     //See if a response has arrived yet for this item
                     if( arpCache.containsKey(tpa) ) {
                         respond( arpCache.get(tpa), frontItem.getTPA(),

@@ -7,7 +7,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 class EtherPort {
     final private LinkedBlockingQueue<DatagramPacket> outQueue;
     private RouterHook routerHook;
-    private int localRealPort; 
+    private int localRealPort, localVirtualPort; 
     private InetAddress localIP, dstAddr;
     private MACAddress virtualMAC;
     //private VirtualNetMask vnm;
@@ -15,8 +15,8 @@ class EtherPort {
     private HashMap<EtherType, EventRegistration> typeListen;
     private boolean runThreads;
 
-    public EtherPort(int localRealPort, MACAddress virtualMAC, 
-                                        RouterHook routerHook){
+    public EtherPort(int localRealPort, int localVirtualPort,
+                         MACAddress virtualMAC, RouterHook routerHook){
         this.routerHook = routerHook;
         this.virtualMAC = virtualMAC;
         this.localRealPort = localRealPort;
@@ -34,9 +34,9 @@ class EtherPort {
         outQueue = new LinkedBlockingQueue<DatagramPacket>();
         startConnection();
     }
-    public EtherPort(int localRealPort, InetAddress localIP, 
-                     MACAddress virtualMAC, RouterHook routerHook 
-                                            /*, VirtualNetMask vnm */ ){
+    public EtherPort(int localRealPort, int localVirtualPort, 
+                     InetAddress localIP, MACAddress virtualMAC, 
+                     RouterHook routerHook /*, VirtualNetMask vnm */ ){
         this.localRealPort = localRealPort;
         this.localIP = localIP;
         this.virtualMAC = virtualMAC;
@@ -66,38 +66,12 @@ class EtherPort {
             this.dstAddr = dstAddr;
         }
     }
-    public boolean haveEndpoint(){
+    public boolean hasEndpoint(){
         return dstAddr == null;
     }
     private char parseDatagram(DatagramPacket pkt) {
         byte[] payload = pkt.getData();
-        return (char) payload[0];   //this seems more efficient than code below
-        
-//        //"Accept": flagChar == 'a' 
-//        if( (flagChar & 0x61) == 0x61 ) {
-//            return 'a';
-//        }
-//        //"Bye": flagChar == 'b'
-//        else if( (flagChar & 0x62) == 0x62 ) {
-//            return 'b';
-//        }
-//        //"Connect": flagChar == 'c'
-//        else if( (flagChar & 0x63) == 0x63 ) {
-//            return 'c';
-//        }
-//        //"Disconnect": flagChar == 'd'
-//        else if( (flagChar & 0x64) == 0x64 ) {
-//            return 'd';
-//        }
-//        //"Ethernet frame": flagChar == 'e'
-//        else if( (flagChar & 0x65) == 0x65 ) {
-//            return 'e';
-//        }
-//        //"Don't want to talk to you": flagChar == 'f'
-//        else if( (flagChar & 0x66) == 0x66 ) {
-//            return 'f';
-//        }
-//        return 'X';
+        return (char) payload[0];
     }
     public boolean addRegistration(short type, EventRegistration evt){
         typeListen.put(new EtherType(type), evt);
@@ -161,10 +135,16 @@ class EtherPort {
                                                 dstAddr, dstPort);
         outQueue.offer(pkt);
     }
-    public void enqueueCommand(char cmd, InetAddress dstAddr, int dstPort){
-        byte[] payload = new byte[1];
-        payload[0]= (byte) cmd;
-        DatagramPacket pkt = new DatagramPacket(payload, 1, dstAddr, dstPort);
+    //Old function - doesn't seem to do everything we need
+//    public void enqueueCommand(char cmd, InetAddress dstAddr, int dstPort){
+//        byte[] payload = new byte[1];
+//        payload[0]= (byte) cmd;
+//        DatagramPacket pkt = new DatagramPacket(payload, 1, dstAddr, dstPort);
+//        outQueue.offer(pkt);
+//    }
+    public void enqueueCommand(byte[] payload, InetAddress dstAddr, int dstPort){
+        DatagramPacket pkt = new DatagramPacket(payload, payload.length, 
+                                                dstAddr, dstPort);
         outQueue.offer(pkt);
     }
     private void receiveFrame(){
@@ -174,6 +154,7 @@ class EtherPort {
             //see if we can recieve anything...
             try{
                 sock.receive(rcvd);
+                //actually rcvd should never be null because receive() blocks until a packet comes in
                 if( rcvd == null )
                     continue;
                 char flag = parseDatagram(rcvd);
@@ -187,7 +168,8 @@ class EtherPort {
                 else {
                     routerHook.commandRcvd(flag, 
                                            rcvd.getAddress(),
-                                           rcvd.getPort());
+                                           rcvd.getPort(),
+                                           this.localVirtualPort);
                 }
             }
             catch(IOException e){
@@ -222,6 +204,14 @@ class EtherPort {
     
     public void setLocalIP( InetAddress localIP ) {
         this.localIP = localIP;
+    }
+    
+    public byte[] getLocalIP() {
+        return localIP.getAddress();
+    }
+    
+    public int getLocalRealPort() {
+        return localRealPort;
     }
     
 //    public void setVirtualNetMask( VirtualNetMask vnm ) {
