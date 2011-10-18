@@ -33,7 +33,7 @@ public class MACAddress {
         byte[] bytes = new byte[6];
         
         for( int i = 0; i < 6; i++ ) {
-            bytes[i] = (byte) ((addr & 0xFF) << i*8);
+            bytes[i] = (byte) ( (addr >> i*8) & 0xff );
         }
         
         return bytes;

@@ -135,13 +135,6 @@ class EtherPort {
                                                 dstAddr, dstPort);
         outQueue.offer(pkt);
     }
-    //Old function - doesn't seem to do everything we need
-//    public void enqueueCommand(char cmd, InetAddress dstAddr, int dstPort){
-//        byte[] payload = new byte[1];
-//        payload[0]= (byte) cmd;
-//        DatagramPacket pkt = new DatagramPacket(payload, 1, dstAddr, dstPort);
-//        outQueue.offer(pkt);
-//    }
     public void enqueueCommand(byte[] payload, InetAddress dstAddr, int dstPort){
         DatagramPacket pkt = new DatagramPacket(payload, payload.length, 
                                                 dstAddr, dstPort);

@@ -3,8 +3,13 @@
 * @author Drake, Ian, Justin
 */
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+
 public class EtherFrame
 {
+    public final long preambleSFD = 0xAAAAAAAAAAAAAAABL;
     private MACAddress dst;
     private MACAddress src;
     private short type;
@@ -17,8 +22,8 @@ public class EtherFrame
     public EtherFrame(byte[] data){
         dst = new MACAddress();
         src = new MACAddress(0L);
-        type = 0x800;
-        data = this.data;
+        type = 0x0800;
+        this.data = data;
         //fcs later
     }
     /**
@@ -49,8 +54,15 @@ public class EtherFrame
     /**
         * This method simply returns the data payload of the frame 
     */
-    public byte[] asBytes(){
-        return data;
+    public byte[] asBytes() throws IOException{
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        DataOutputStream byteAry = new DataOutputStream(bytes);
+        byteAry.writeLong(preambleSFD);
+        byteAry.write(dst.getByteAddress(),0,dst.getByteAddress().length);
+        byteAry.write(src.getByteAddress(),0,src.getByteAddress().length);
+        byteAry.writeShort((int)type);
+        byteAry.write(data,0,data.length);
+        return bytes.toByteArray();
     }
     /**
         * Computes the Frame Check Sequence of the packet 
