@@ -54,14 +54,19 @@ public class EtherFrame
     /**
         * This method simply returns the data payload of the frame 
     */
-    public byte[] asBytes() throws IOException{
+    public byte[] asBytes() {
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
         DataOutputStream byteAry = new DataOutputStream(bytes);
-        byteAry.writeLong(preambleSFD);
-        byteAry.write(dst.getByteAddress(),0,dst.getByteAddress().length);
-        byteAry.write(src.getByteAddress(),0,src.getByteAddress().length);
-        byteAry.writeShort((int)type);
-        byteAry.write(data,0,data.length);
+        try{
+            byteAry.writeLong(preambleSFD);
+            byteAry.write(dst.getByteAddress(),0,dst.getByteAddress().length);
+            byteAry.write(src.getByteAddress(),0,src.getByteAddress().length);
+            byteAry.writeShort((int)type);
+            byteAry.write(data,0,data.length);
+        }
+        catch (IOException e){
+            //this won't happen!
+        }
         return bytes.toByteArray();
     }
     /**
