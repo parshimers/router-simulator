@@ -199,8 +199,8 @@ class EtherPort {
         this.localIP = localIP;
     }
     
-    public byte[] getLocalIP() {
-        return localIP.getAddress();
+    public InetAddress getLocalIP() {
+        return localIP;
     }
     
     public int getLocalRealPort() {

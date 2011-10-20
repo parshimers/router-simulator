@@ -23,6 +23,8 @@ public class Router extends Thread implements RouterHook {
     public void commandRcvd(char cmd, InetAddress remoteRealIP, 
                             int remoteRealPort, int localVirtualPort) {
 
+        EtherPort ePort = ports.get(localVirtualPort);
+        
         switch(cmd) {
             case 'a': { //"Accept connection request from remote router"
                 
@@ -32,51 +34,25 @@ public class Router extends Thread implements RouterHook {
                 
                 break;
             }
-            case 'c': { //"Connection requested by remote router"
-                EtherPort ePort = ports.get(localVirtualPort);
+            case 'c': { //"Connection requested by remote router"           
                 
                 //if ePort is currently connected, reject the request
-                if( ePort.hasEndpoint() ) {
-                    String rejectString = "f <currently connected elsewhere>";
-                    byte[] payload = new byte[rejectString.length()];
-                    for( int i = 0; i < payload.length; i++ )
-                        payload[i] = (byte) rejectString.charAt(i);
+                if( ePort.hasEndpoint() ) {                 
+                    String rejectString = "currently connected elsewhere";
                     
-                    ePort.enqueueCommand(payload, remoteRealIP, remoteRealPort);
+                    ePort.enqueueCommand(getRejectionMessage(rejectString), 
+                                         remoteRealIP, remoteRealPort);
                 }
                 //else create and send 'a' response frame in response
                 else {
-                    int localRealPort = ePort.getLocalRealPort();
-                    byte[] payload = new byte[22];
-                    byte[] remoteRealBytes = remoteRealIP.getAddress(),
-                           localRealBytes = ePort.getLocalIP();
-
-                    payload[0] = (byte) 'a';
-                    //the InetAddress.getAddress() method returns the bytes
-                    //in reverse order, so flip them
-                    payload[1] = remoteRealBytes[3];
-                    payload[2] = (byte) '.';
-                    payload[3] = remoteRealBytes[2];
-                    payload[4] = (byte) '.';
-                    payload[5] = remoteRealBytes[1];
-                    payload[6] = (byte) '.';
-                    payload[7] = remoteRealBytes[0];
-                    payload[8] = (byte) ':';
-                    payload[9] = (byte) ((0xFF00 & remoteRealPort) >> 8);
-                    payload[10] = (byte) (0x00FF & remoteRealPort);
-
-                    payload[11] = (byte) ' ';
-
-                    payload[12] = localRealBytes[3];
-                    payload[13] = (byte) '.';
-                    payload[14] = localRealBytes[2];
-                    payload[15] = (byte) '.';
-                    payload[16] = localRealBytes[1];
-                    payload[17] = (byte) '.';
-                    payload[18] = localRealBytes[0];
-                    payload[19] = (byte) ':';
-                    payload[20] = (byte) ((0xFF00 & localRealPort) >> 8);
-                    payload[21] = (byte) (0x00FF & localRealPort);
+                    String acceptString = "a" 
+                                          + remoteRealIP.getAddress().toString()
+                                          + ":" + remoteRealPort + " " 
+                                          + ePort.getLocalIP().toString() + ":"
+                                          + ePort.getLocalRealPort();               
+                    byte[] payload = new byte[acceptString.length()];
+                    for( int i = 0; i < payload.length; i++ )
+                        payload[i] = (byte) acceptString.charAt(i);
 
                     ePort.enqueueCommand(payload, remoteRealIP, remoteRealPort);
                     ePort.setDest(remoteRealIP);
@@ -90,6 +66,10 @@ public class Router extends Thread implements RouterHook {
             }
             //case 'e' is handled in EtherPort function receiveFrame()
             case 'f': { //"Don't want to talk to you"
+                String rejectString = "sorry, don't want to talk now";
+                
+                ePort.enqueueCommand(getRejectionMessage(rejectString), 
+                                     remoteRealIP, remoteRealPort);              
                 
                 break;
             }
@@ -98,6 +78,15 @@ public class Router extends Thread implements RouterHook {
                                         ", port " + remoteRealPort);
         }
         
+    }
+    
+    private byte[] getRejectionMessage(String rejectString) {
+        rejectString = "f <" + rejectString + ">";
+        byte[] payload = new byte[rejectString.length()];
+        for( int i = 0; i < payload.length; i++ )
+            payload[i] = (byte) rejectString.charAt(i);
+
+        return payload;
     }
     
     private int nextFreeVirtualPort() {
@@ -163,7 +152,7 @@ public class Router extends Thread implements RouterHook {
         
         //tell the targeted EtherPort to gracefully shut its threads
         //and other processes down
-        //......
+        ports.get(localVirtualPort).stopThreads();
         
         //make the port eligible for garbage collection
         ports.set(localVirtualPort, null);
