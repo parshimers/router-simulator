@@ -3,6 +3,8 @@ import java.net.*;
 import java.io.*;
 import java.util.HashMap;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.Arrays;
+import java.nio.ByteBuffer;
 
 class EtherPort {
     final private LinkedBlockingQueue<DatagramPacket> outQueue;
@@ -32,6 +34,7 @@ class EtherPort {
                                + "on local port " + localRealPort);
         }
         outQueue = new LinkedBlockingQueue<DatagramPacket>();
+        typeListen = new HashMap<EtherType, EventRegistration>();
         startConnection();
     }
     public EtherPort(int localRealPort, int localVirtualPort, 
@@ -49,6 +52,7 @@ class EtherPort {
             System.out.println("Could not establish socket on local port " 
                                 + localRealPort);
         }
+        typeListen = new HashMap<EtherType, EventRegistration>();
         outQueue = new LinkedBlockingQueue<DatagramPacket>();
         startConnection();
     }
@@ -69,42 +73,19 @@ class EtherPort {
     public boolean hasEndpoint(){
         return dstAddr == null;
     }
-    private char parseDatagram(DatagramPacket pkt) {
-        byte[] payload = pkt.getData();
-        return (char) payload[0];
-    }
     public boolean addRegistration(short type, EventRegistration evt){
         typeListen.put(new EtherType(type), evt);
         return true;
     }
-    public EtherFrame parseFrame(byte[] payload) throws IOException{
-        //dstToData will store all bytes in the virtual ethernet frame from
-        //destination MAC up to and including the end of the data.
-        //Subtract 8 bytes for preamble/SFD, 4 for CRC, and 1 for 'e'.
-        ByteArrayInputStream  bytes = new ByteArrayInputStream(payload);
-        DataInputStream payloadStream = new DataInputStream(bytes);
-        byte[] dstToData = new byte[payload.length - 8 - 4 -1];
-        //ignore the first 8 bytes of preamble, SFD
-        payloadStream.skipBytes(8);
-        payloadStream.read(dstToData, 0, dstToData.length);
-        int fcs = payloadStream.readInt();
-        //flip all bits except for CRC
-        flipBits(dstToData);
-        bytes = new ByteArrayInputStream(dstToData);
-        payloadStream = new DataInputStream(bytes);
-        byte[] dstBytes = new byte[6];
-        byte[] srcBytes = new byte[6];
-        payloadStream.read(dstBytes,0,6);
-        payloadStream.read(srcBytes,0,6);
-        MACAddress dst = new MACAddress(dstBytes);
-        if( !(dst.getLongAddress() == virtualMAC.getLongAddress() 
-            || dst.getLongAddress() == MACAddress.getBroadcastAddress()) )
-            return null;     //this isnt for us, toss it
-        MACAddress src = new MACAddress(srcBytes);
-        short type = (short) payloadStream.readUnsignedShort();
-        byte[] data = new byte[dstToData.length-14];
-        payloadStream.read(data,0,data.length);
-    
+    public EtherFrame parseFrame(byte[] payload) {
+        ByteBuffer bb = ByteBuffer.wrap(payload);
+        int fcs = bb.getInt(payload.length-4);
+        flipBits(payload);
+        long preambleSFD=bb.getLong();
+        MACAddress dst = new MACAddress(Arrays.copyOfRange(payload,7,13));
+        MACAddress src = new MACAddress(Arrays.copyOfRange(payload,14,20));
+        short type = bb.getShort(21);
+        byte[] data = Arrays.copyOfRange(payload,23,payload.length-5);
         EtherFrame rcvdFrame = new EtherFrame(dst,src,type,data);
         //after FCS is complete
         /*if(rcvdFrame.computeFCS() == fcs){
@@ -129,9 +110,16 @@ class EtherPort {
         });
         sendThread.start();
     }
-    public void enqueueFrame(EtherFrame eth, InetAddress dstAddr, int dstPort){
-        byte[] payload = eth.asBytes();
-        DatagramPacket pkt = new DatagramPacket(payload, payload.length, 
+    public void enqueueFrame(EtherFrame eth, InetAddress dstAddr, int dstPort)
+    {
+
+        byte[] frame = eth.asBytes();
+        byte[] payload = new byte[frame.length+1];
+        System.arraycopy(frame,0,payload,1,frame.length-4);
+        flipBits(payload);
+        payload[0] = (byte)'e';
+        System.arraycopy(frame,frame.length-5,payload,payload.length-6,4);
+        DatagramPacket pkt = new DatagramPacket(payload, payload.length,
                                                 dstAddr, dstPort);
         outQueue.offer(pkt);
     }
@@ -141,25 +129,25 @@ class EtherPort {
         outQueue.offer(pkt);
     }
     private void receiveFrame(){
-        DatagramPacket rcvd = null;
-        
+        byte[] buf = new byte[1532];
+        DatagramPacket rcvd = new DatagramPacket(buf,buf.length);
         while(runThreads){
             //see if we can recieve anything...
             try{
                 sock.receive(rcvd);
-                //actually rcvd should never be null because receive() blocks until a packet comes in
-                if( rcvd == null )
-                    continue;
-                char flag = parseDatagram(rcvd);
-                if( flag == 'e') {
-                    EtherFrame eth = parseFrame(rcvd.getData());
-                    EventRegistration evt = typeListen.get(
-                                               new EtherType(eth.getType()));
+                if( buf[0]  == (byte)101) {
+                    byte[] frame = new byte[rcvd.getLength()];
+                    System.arraycopy(rcvd.getData(),0,frame,0,rcvd.getLength());
+                    EtherFrame eth = parseFrame(frame);
+                    System.out.println(Arrays.toString(eth.asBytes()));
+                    EventRegistration evt = typeListen.get(new EtherType(
+                                                           eth.getType()));
+                    System.out.println(evt);
                     if(evt != null) 
                         evt.frameReceived(eth.asBytes());
                 }
                 else {
-                    routerHook.commandRcvd(flag, 
+                    routerHook.commandRcvd((char)buf[0], 
                                            rcvd.getAddress(),
                                            rcvd.getPort(),
                                            this.localVirtualPort);
@@ -172,7 +160,13 @@ class EtherPort {
     }
     private void sendFrame(){
         while(runThreads){
-            DatagramPacket currpkt = outQueue.poll();
+            DatagramPacket currpkt=null;
+            try{
+                currpkt = outQueue.take();
+            }
+            catch(InterruptedException e){
+                System.out.println("interrupted");
+            }
             while(currpkt != null){
                 try{ sock.send(currpkt); }
                 catch(IOException e){ 
@@ -185,7 +179,7 @@ class EtherPort {
             }
         }
     }
-    private void flipBits( byte[] bytes ) {
+    private static void flipBits( byte[] bytes ) {
         for( int i = 0; i < bytes.length; i++ ) {
             byte oldByte = bytes[i];
             bytes[i] = (byte) ( ((oldByte & 0x01)<<7) | ((oldByte & 0x02)<<5) |
@@ -206,9 +200,8 @@ class EtherPort {
     public int getLocalRealPort() {
         return localRealPort;
     }
-    
 //    public void setVirtualNetMask( VirtualNetMask vnm ) {
-//        this.vnm = vnm;
+//        this.vnva openbsd ppcm = vnm;
 //    }
     
 }

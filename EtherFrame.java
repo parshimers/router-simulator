@@ -35,7 +35,7 @@ public class EtherFrame
     public EtherFrame(MACAddress dst, MACAddress src, byte[] data){
         this.dst = dst;
         this.src = src;
-        type = 0x800;
+        type = 0x0800;
         this.data = data;
     }
     /**
@@ -63,6 +63,7 @@ public class EtherFrame
             byteAry.write(src.getByteAddress(),0,src.getByteAddress().length);
             byteAry.writeShort((int)type);
             byteAry.write(data,0,data.length);
+            byteAry.writeInt(fcs);
         }
         catch (IOException e){
             //this won't happen!
