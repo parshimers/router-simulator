@@ -81,11 +81,11 @@ class EtherPort {
         ByteBuffer bb = ByteBuffer.wrap(payload);
         int fcs = bb.getInt(payload.length-4);
         flipBits(payload);
-        long preambleSFD=bb.getLong();
-        MACAddress dst = new MACAddress(Arrays.copyOfRange(payload,7,13));
-        MACAddress src = new MACAddress(Arrays.copyOfRange(payload,14,20));
-        short type = bb.getShort(21);
-        byte[] data = Arrays.copyOfRange(payload,23,payload.length-5);
+        long preambleSFD = bb.getLong();
+        MACAddress dst = new MACAddress(Arrays.copyOfRange(payload,8,13));
+        MACAddress src = new MACAddress(Arrays.copyOfRange(payload,14,19));
+        short type = bb.getShort(20);
+        byte[] data = Arrays.copyOfRange(payload,22,payload.length-5);
         EtherFrame rcvdFrame = new EtherFrame(dst,src,type,data);
         //after FCS is complete
         /*if(rcvdFrame.computeFCS() == fcs){
