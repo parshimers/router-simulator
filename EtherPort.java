@@ -14,7 +14,7 @@ class EtherPort {
     private MACAddress virtualMAC;
     //private VirtualNetMask vnm;
     private DatagramSocket sock;
-    private HashMap<EtherType, EventRegistration> typeListen;
+    private HashMap<Short, EventRegistration> typeListen;
     private boolean runThreads;
 
     public EtherPort(int localRealPort, int localVirtualPort,
@@ -34,7 +34,7 @@ class EtherPort {
                                + "on local port " + localRealPort);
         }
         outQueue = new LinkedBlockingQueue<DatagramPacket>();
-        typeListen = new HashMap<EtherType, EventRegistration>();
+        typeListen = new HashMap<Short, EventRegistration>();
         startConnection();
     }
     public EtherPort(int localRealPort, int localVirtualPort, 
@@ -52,7 +52,7 @@ class EtherPort {
             System.out.println("Could not establish socket on local port " 
                                 + localRealPort);
         }
-        typeListen = new HashMap<EtherType, EventRegistration>();
+        typeListen = new HashMap<Short, EventRegistration>();
         outQueue = new LinkedBlockingQueue<DatagramPacket>();
         startConnection();
     }
@@ -74,7 +74,7 @@ class EtherPort {
         return dstAddr == null;
     }
     public boolean addRegistration(short type, EventRegistration evt){
-        typeListen.put(new EtherType(type), evt);
+        typeListen.put(new Short(type), evt);
         return true;
     }
     public EtherFrame parseFrame(byte[] payload) {
@@ -82,10 +82,10 @@ class EtherPort {
         int fcs = bb.getInt(payload.length-4);
         flipBits(payload);
         long preambleSFD = bb.getLong();
-        MACAddress dst = new MACAddress(Arrays.copyOfRange(payload,8,13));
-        MACAddress src = new MACAddress(Arrays.copyOfRange(payload,14,19));
-        short type = bb.getShort(20);
-        byte[] data = Arrays.copyOfRange(payload,22,payload.length-5);
+        MACAddress dst = new MACAddress(Arrays.copyOfRange(payload,9,15));
+        MACAddress src = new MACAddress(Arrays.copyOfRange(payload,15,21));
+        short type = toShort(Arrays.copyOfRange(payload,21,24));
+        byte[] data = Arrays.copyOfRange(payload,23,payload.length-4);
         EtherFrame rcvdFrame = new EtherFrame(dst,src,type,data);
         //after FCS is complete
         /*if(rcvdFrame.computeFCS() == fcs){
@@ -110,18 +110,18 @@ class EtherPort {
         });
         sendThread.start();
     }
-    public void enqueueFrame(EtherFrame eth, InetAddress dstAddr, int dstPort)
-    {
+    public void enqueueFrame(EtherFrame eth, InetAddress dstAddr, int dstPort){
 
         byte[] frame = eth.asBytes();
         byte[] payload = new byte[frame.length+1];
         System.arraycopy(frame,0,payload,1,frame.length-4);
         flipBits(payload);
         payload[0] = (byte)'e';
-        System.arraycopy(frame,frame.length-5,payload,payload.length-6,4);
+        System.arraycopy(frame,frame.length-4,payload,payload.length-4,4);
         DatagramPacket pkt = new DatagramPacket(payload, payload.length,
                                                 dstAddr, dstPort);
         outQueue.offer(pkt);
+        System.out.println(Arrays.toString(pkt.getData()));
     }
     public void enqueueCommand(byte[] payload, InetAddress dstAddr, int dstPort){
         DatagramPacket pkt = new DatagramPacket(payload, payload.length, 
@@ -138,11 +138,12 @@ class EtherPort {
                 if( buf[0]  == (byte)101) {
                     byte[] frame = new byte[rcvd.getLength()];
                     System.arraycopy(rcvd.getData(),0,frame,0,rcvd.getLength());
+                    //System.out.println(Arrays.toString(frame));
                     EtherFrame eth = parseFrame(frame);
-                    System.out.println(Arrays.toString(eth.asBytes()));
-                    EventRegistration evt = typeListen.get(new EtherType(
+                    //System.out.println(Arrays.toString(eth.asBytes()));
+                    //System.out.println(eth.getType());
+                    EventRegistration evt = typeListen.get(new Short(
                                                            eth.getType()));
-                    System.out.println(evt);
                     if(evt != null) 
                         evt.frameReceived(eth.asBytes());
                 }
@@ -199,6 +200,13 @@ class EtherPort {
     
     public int getLocalRealPort() {
         return localRealPort;
+    }
+    private short toShort(byte [] b){
+        short sh=0;
+        sh |= b[0] & 0xFF;
+        sh <<=8;
+        sh |= b[1] & 0xFF;
+        return sh;
     }
 //    public void setVirtualNetMask( VirtualNetMask vnm ) {
 //        this.vnva openbsd ppcm = vnm;
