@@ -94,4 +94,6 @@ public class EtherFrame
     public short getType(){
         return type;
     }
+    public MACAddress getDst(){return dst;}
+    public MACAddress getSrc(){return src;}
 }

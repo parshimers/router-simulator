@@ -138,14 +138,14 @@ class EtherPort {
                 if( buf[0]  == (byte)101) {
                     byte[] frame = new byte[rcvd.getLength()];
                     System.arraycopy(rcvd.getData(),0,frame,0,rcvd.getLength());
-                    //System.out.println(Arrays.toString(frame));
                     EtherFrame eth = parseFrame(frame);
-                    //System.out.println(Arrays.toString(eth.asBytes()));
-                    //System.out.println(eth.getType());
                     EventRegistration evt = typeListen.get(new Short(
                                                            eth.getType()));
-                    if(evt != null) 
+                    if(evt != null && (eth.getDst().getLongAddress() == 
+                                       virtualMAC.getLongAddress()))
+                     {
                         evt.frameReceived(eth.asBytes());
+                     }
                 }
                 else {
                     routerHook.commandRcvd((char)buf[0], 
