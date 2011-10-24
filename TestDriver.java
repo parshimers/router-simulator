@@ -18,7 +18,7 @@ public class TestDriver {
     public static void main(String[] args) {
         Router router = new Router(10);
         try {
-            router.listen(0, 4000);
+            router.createPort(0, 4000);
         } catch(Exception e) {}
         
         //When packet is received, class EtherPort will call iGotAPacket() below

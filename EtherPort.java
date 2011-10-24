@@ -6,13 +6,13 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.Arrays;
 import java.nio.ByteBuffer;
 
-class EtherPort {
+public class EtherPort {
     final private LinkedBlockingQueue<DatagramPacket> outQueue;
     private RouterHook routerHook;
-    private int localRealPort, localVirtualPort; 
+    private int localRealPort, localVirtualPort, dstPort; 
     private InetAddress localIP, dstAddr;
     private MACAddress virtualMAC;
-    //private VirtualNetMask vnm;
+    private NetMask vnm;
     private DatagramSocket sock;
     private HashMap<Short, EventRegistration> typeListen;
     private boolean runThreads;
@@ -65,10 +65,17 @@ class EtherPort {
         runThreads = true;
         // sock.connect()? later. 
     }
-    public void setDest(InetAddress dstAddr){
-        if( dstAddr == null && outQueue.size()==0 ){
-            this.dstAddr = dstAddr;
-        }
+    public void setDestIP(InetAddress dstAddr) {
+        this.dstAddr = dstAddr;
+    }
+    public InetAddress getDestIP() {
+        return dstAddr;
+    }
+    public void setDestPort(int dstPort) {
+        this.dstPort = dstPort;
+    }
+    public int getDestPort() {
+        return dstPort;
     }
     public boolean hasEndpoint(){
         return dstAddr == null;
@@ -111,7 +118,6 @@ class EtherPort {
         sendThread.start();
     }
     public void enqueueFrame(EtherFrame eth, InetAddress dstAddr, int dstPort){
-
         byte[] frame = eth.asBytes();
         byte[] payload = new byte[frame.length+1];
         System.arraycopy(frame,0,payload,1,frame.length-4);
@@ -135,23 +141,24 @@ class EtherPort {
             //see if we can recieve anything...
             try{
                 sock.receive(rcvd);
-                if( buf[0]  == (byte)101) {
+                if( buf[0]  == (byte) 'e' ) {
                     byte[] frame = new byte[rcvd.getLength()];
                     System.arraycopy(rcvd.getData(),0,frame,0,rcvd.getLength());
                     EtherFrame eth = parseFrame(frame);
                     EventRegistration evt = typeListen.get(new Short(
                                                            eth.getType()));
-                    if(evt != null && (eth.getDst().getLongAddress() == 
-                                       virtualMAC.getLongAddress()))
-                     {
+                    if( evt != null && 
+                          (eth.getDst().getLongAddress() == 
+                           virtualMAC.getLongAddress() )    ) {
                         evt.frameReceived(eth.asBytes());
-                     }
+                    }
                 }
                 else {
                     routerHook.commandRcvd((char)buf[0], 
                                            rcvd.getAddress(),
                                            rcvd.getPort(),
-                                           this.localVirtualPort);
+                                           this.localVirtualPort,
+                                           buf);
                 }
             }
             catch(IOException e){
@@ -197,9 +204,15 @@ class EtherPort {
     public InetAddress getLocalIP() {
         return localIP;
     }
-    
     public int getLocalRealPort() {
         return localRealPort;
+    }
+    public int getLocalVirtualPort() {
+        return localVirtualPort;
+    }
+    public void setVirtualNetMask( NetMask vnm ) {
+        this.vnm = vnm;
+        //this.vnva openbsd ppcm = vnm;
     }
     private short toShort(byte [] b){
         short sh=0;
@@ -208,8 +221,5 @@ class EtherPort {
         sh |= b[1] & 0xFF;
         return sh;
     }
-//    public void setVirtualNetMask( VirtualNetMask vnm ) {
-//        this.vnva openbsd ppcm = vnm;
-//    }
     
 }
