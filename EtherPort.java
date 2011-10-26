@@ -138,10 +138,10 @@ public class EtherPort {
         byte[] buf = new byte[1532];
         DatagramPacket rcvd = new DatagramPacket(buf,buf.length);
         while(runThreads){
-            //see if we can recieve anything...
             try{
                 sock.receive(rcvd);
-                if( buf[0]  == (byte) 'e' ) {
+                int len = rcvd.getLength();
+                if( buf[0]  == (byte) 'e' && 72<=len && len<=1526) {
                     byte[] frame = new byte[rcvd.getLength()];
                     System.arraycopy(rcvd.getData(),0,frame,0,rcvd.getLength());
                     EtherFrame eth = parseFrame(frame);
@@ -150,10 +150,10 @@ public class EtherPort {
                     if( evt != null && 
                           (eth.getDst().getLongAddress() == 
                            virtualMAC.getLongAddress() )    ) {
-                        evt.frameReceived(eth.asBytes());
+                        evt.frameReceived(eth.getData()); //else, this isnt for us
                     }
                 }
-                else {
+                else { //if not an 'e' packet, give it to our controller
                     routerHook.commandRcvd((char)buf[0], 
                                            rcvd.getAddress(),
                                            rcvd.getPort(),

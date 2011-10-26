@@ -70,6 +70,9 @@ public class EtherFrame
         }
         return bytes.toByteArray();
     }
+    public byte[] getData() {
+        return data;
+    }
     /**
         * Computes the Frame Check Sequence of the packet 
     */ 
