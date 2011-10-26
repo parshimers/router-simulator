@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.Arrays;
 import java.nio.ByteBuffer;
+import java.util.zip.CRC32;
 
 public class EtherPort {
     final private LinkedBlockingQueue<DatagramPacket> outQueue;
@@ -84,7 +85,7 @@ public class EtherPort {
         typeListen.put(new Short(type), evt);
         return true;
     }
-    public EtherFrame parseFrame(byte[] payload) {
+    public EtherFrame parseFrame(byte[] payload) throws IOException{
         ByteBuffer bb = ByteBuffer.wrap(payload);
         int fcs = bb.getInt(payload.length-4);
         flipBits(payload);
@@ -95,12 +96,9 @@ public class EtherPort {
         byte[] data = Arrays.copyOfRange(payload,23,payload.length-4);
         EtherFrame rcvdFrame = new EtherFrame(dst,src,type,data);
         //after FCS is complete
-        /*if(rcvdFrame.computeFCS() == fcs){
-            return rcvdFrame;
-        }
-        else throw new IOException("Corrupt frame");
-        */
-        //right now we'll just return it without checking the CRC
+        int crc = compCRC(Arrays.copyOfRange(payload,9,payload.length-4));
+        if(crc != fcs) throw new IOException("Corrupt frame");
+        //right now we'll just return it anyways since CRC is probably buggy
         return rcvdFrame; 
     }
     //making this private prevents "Overridable method in constructor" warning
@@ -220,6 +218,21 @@ public class EtherPort {
         sh <<=8;
         sh |= b[1] & 0xFF;
         return sh;
-    }
+   }
+   private int compCRC(byte[] b){
+        byte[] first32 = new byte[32];
+        byte[] quot = new byte[b.length];
+        System.arraycopy(b,0,first32,0,32);
+        flipBits(first32);
+        System.arraycopy(first32,0,quot,0,32);
+        System.arraycopy(b,32,quot,32,b.length-32);
+        CRC32 crc = new CRC32();
+        crc.update(quot);
+        int notcomp = (int)crc.getValue(); //crc32 is 32 bits, oracle. 
+        ByteBuffer buf = ByteBuffer.allocate(4).putInt((int)crc.getValue());
+        byte[] flip = buf.array();
+        flipBits(flip);
+        return buf.getInt();
+   }
     
 }
