@@ -235,7 +235,7 @@ public class EtherPort {
         ByteBuffer buf = ByteBuffer.allocate(4).putInt((int)crc.getValue());
         byte[] flip = buf.array();
         flipBits(flip);
-        return buf.getInt();
+        return buf.getInt(0);
    }
     
 }
