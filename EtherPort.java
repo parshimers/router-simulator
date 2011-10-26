@@ -117,6 +117,9 @@ public class EtherPort {
     }
     public void enqueueFrame(EtherFrame eth, InetAddress dstAddr, int dstPort){
         byte[] frame = eth.asBytes();
+        int crc = compCRC(Arrays.copyOfRange(frame,8,frame.length-4));
+        eth.writeFCS(crc);
+        frame = eth.asBytes();
         byte[] payload = new byte[frame.length+1];
         System.arraycopy(frame,0,payload,1,frame.length-4);
         flipBits(payload);

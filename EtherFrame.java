@@ -91,8 +91,8 @@ public class EtherFrame
         * Writes the FCS for a newly created packet
         * Shouldn't be used outside of packet creation.
     */
-    private void writeFCS(){
-        fcs = computeFCS();
+    public void writeFCS(int fcs){
+        this.fcs = fcs;
     } 
     public short getType(){
         return type;
