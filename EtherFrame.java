@@ -9,7 +9,7 @@ import java.io.IOException;
 
 public class EtherFrame
 {
-    public final long preambleSFD = 0xAAAAAAAAAAAAAAABL;
+    public static final long preambleSFD = 0xAAAAAAAAAAAAAAABL;
     private MACAddress dst;
     private MACAddress src;
     private short type;

@@ -7,14 +7,14 @@ public class Router extends Thread implements RouterHook {
     
     private ArrayList<EtherPort> ports;
     private ARP_Engine arpEngine;
-    private HashMap<InetAddress, GatewayEntry> routingTable;
-    private int nextPortNum, nextIpSuffix;
+    private HashMap<InetAddress, RoutingTableEntry> routingTable;
+    private int nextRealPortNum, nextIpSuffix;
     private long nextMacLong;
 
     public Router( int numPorts ) {
-        nextPortNum = 4000;
-        nextIpSuffix = 0x0001;
-        nextMacLong = 0xE10000000001L;
+        nextRealPortNum = 4000;
+        //nextIpSuffix = 0x0001;
+        nextMacLong = 0xE10000000001L;  //E1 = our group's prefix
         ports = new ArrayList<EtherPort>(numPorts);
         arpEngine = new ARP_Engine();
     }
@@ -150,7 +150,7 @@ public class Router extends Thread implements RouterHook {
     }
     
     private int nextFreeRealPort() {
-        return nextPortNum++;
+        return nextRealPortNum++;
     }
     
     //Actually we might not need this variable and method, but leaving them here in case they're useful.
@@ -224,6 +224,27 @@ public class Router extends Thread implements RouterHook {
         EtherPort ePort = ports.get(localVirtualPort);
         ePort.setLocalIP(localIP);
         ePort.setVirtualNetMask( new NetMask(netMask) );
+    }
+    
+    public void route( InetAddress virtualNetworkAddress, NetMask virtualNetMask,
+                       InetAddress virtualGatewayAddress ) {
+        
+        //I could be wrong about how this part works, but I'm thinking we look
+        //through our ports, see if any match the virtualGatewayAddress (the "target"),
+        //and if so we are directly connected.
+        boolean isDirect = false;
+        for( EtherPort e: ports ) {
+            if( e != null && e.getLocalIP().equals(virtualGatewayAddress) ) {
+                isDirect = true;
+                break;
+            }
+        }
+        
+        RoutingTableEntry rte = new RoutingTableEntry( virtualNetMask,
+                                                       virtualGatewayAddress,
+                                                       isDirect );
+        routingTable.put(virtualNetworkAddress, rte);
+        
     }
     
     public void stopAllPorts() {

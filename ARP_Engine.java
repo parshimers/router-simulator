@@ -5,7 +5,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 public class ARP_Engine implements EventRegistration {
     
-    final private LinkedBlockingQueue<ARPPacket> outQueue;
+    private LinkedBlockingQueue<ARPPacket> outQueue;
     private static HashMap<InetAddress, MACAddress> arpCache;
     private Thread queueThread;
     
@@ -30,7 +30,6 @@ public class ARP_Engine implements EventRegistration {
                         outQueue.poll();
                     }
                     else {  //Move frontItem to the back of outQueue
-                        //Is this procedure thread-safe?
                         frontItem = outQueue.poll();
                         outQueue.add(frontItem);
                     }
@@ -73,7 +72,7 @@ public class ARP_Engine implements EventRegistration {
                                            sha, request.toByteArray() );
         
         //transmit frame
-        //not quite sure how we're going to transmit.....
+        //not quite sure how this works...
         
         //Place this request into rotating queue outQueue.
         outQueue.add(request);

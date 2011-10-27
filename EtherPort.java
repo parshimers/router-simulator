@@ -13,39 +13,41 @@ public class EtherPort {
     private int localRealPort, localVirtualPort, dstPort; 
     private InetAddress localIP, dstAddr;
     private MACAddress virtualMAC;
-    private NetMask vnm;
+    private NetMask virtualNetMask;
     private DatagramSocket sock;
     private HashMap<Short, EventRegistration> typeListen;
     private boolean runThreads;
 
     public EtherPort(int localRealPort, int localVirtualPort,
-                         MACAddress virtualMAC, RouterHook routerHook){
+                     MACAddress virtualMAC, RouterHook routerHook) {
         this.routerHook = routerHook;
         this.virtualMAC = virtualMAC;
         this.localRealPort = localRealPort;
+        
         try{
             sock = new DatagramSocket(localRealPort);
         }
-        catch(SocketException e){
+        catch(SocketException e) {
             System.out.println("Could not establish socket on local port " 
                                 + localRealPort);
         }
-        catch(SecurityException e){
+        catch(SecurityException e) {
             System.out.println("Security exception establishing socket "
                                + "on local port " + localRealPort);
         }
+        
         outQueue = new LinkedBlockingQueue<DatagramPacket>();
         typeListen = new HashMap<Short, EventRegistration>();
         startConnection();
     }
     public EtherPort(int localRealPort, int localVirtualPort, 
                      InetAddress localIP, MACAddress virtualMAC, 
-                     RouterHook routerHook /*, VirtualNetMask vnm */ ){
-        this.localRealPort = localRealPort;
+                     RouterHook routerHook, NetMask virtualNetMask ) {
+        this.localRealPort = localRealPort; 
         this.localIP = localIP;
         this.virtualMAC = virtualMAC;
         this.routerHook = routerHook;
-        /*this.vnm = vnm*/  //don't know what this is but eventually we'll need it
+        this.virtualNetMask = virtualNetMask;
         try{
             sock = new DatagramSocket(localRealPort, localIP);
         }
@@ -97,7 +99,8 @@ public class EtherPort {
         EtherFrame rcvdFrame = new EtherFrame(dst,src,type,data);
         //after FCS is complete
         int crc = compCRC(Arrays.copyOfRange(payload,9,payload.length-4));
-        if(crc != fcs) throw new IOException("Corrupt frame");
+        if(crc != fcs) 
+            throw new IOException("Corrupt frame");
         //right now we'll just return it anyways since CRC is probably buggy
         return rcvdFrame; 
     }
@@ -142,17 +145,22 @@ public class EtherPort {
             try{
                 sock.receive(rcvd);
                 int len = rcvd.getLength();
-                if( buf[0]  == (byte) 'e' && 72<=len && len<=1526) {
+                
+                if( buf[0]  == (byte) 'e' && 72 <= len && len <= 1526) {
                     byte[] frame = new byte[rcvd.getLength()];
                     System.arraycopy(rcvd.getData(),0,frame,0,rcvd.getLength());
                     EtherFrame eth = parseFrame(frame);
-                    EventRegistration evt = typeListen.get(new Short(
-                                                           eth.getType()));
+                    EventRegistration evt = typeListen.get( 
+                                                     new Short(eth.getType()) );
+                    
                     if( evt != null && 
-                          (eth.getDst().getLongAddress() == 
-                           virtualMAC.getLongAddress() )    ) {
-                        evt.frameReceived(eth.getData()); //else, this isnt for us
-                    }
+                          ( ( eth.getDst().getLongAddress() 
+                              == virtualMAC.getLongAddress() ) 
+                            ||
+                            ( eth.getDst().getLongAddress() 
+                              == MACAddress.BROADCAST_ADDRESS ) ) ) {
+                        evt.frameReceived(eth.getData()); 
+                    } //else, this isn't for us
                 }
                 else { //if not an 'e' packet, give it to our controller
                     routerHook.commandRcvd((char)buf[0], 
@@ -212,13 +220,13 @@ public class EtherPort {
         return localVirtualPort;
     }
     public void setVirtualNetMask( NetMask vnm ) {
-        this.vnm = vnm;
+        this.virtualNetMask = vnm;
         //this.vnva openbsd ppcm = vnm;
     }
     private short toShort(byte [] b){
-        short sh=0;
+        short sh = 0;
         sh |= b[0] & 0xFF;
-        sh <<=8;
+        sh <<= 8;
         sh |= b[1] & 0xFF;
         return sh;
    }
@@ -231,8 +239,8 @@ public class EtherPort {
         System.arraycopy(b,32,quot,32,b.length-32);
         CRC32 crc = new CRC32();
         crc.update(quot);
-        int notcomp = (int)crc.getValue(); //crc32 is 32 bits, oracle. 
-        ByteBuffer buf = ByteBuffer.allocate(4).putInt((int)crc.getValue());
+        int notcomp = (int) crc.getValue(); //crc32 is 32 bits, oracle. 
+        ByteBuffer buf = ByteBuffer.allocate(4).putInt( (int)crc.getValue() );
         byte[] flip = buf.array();
         flipBits(flip);
         return buf.getInt(0);

@@ -1,5 +1,7 @@
 
 public class MACAddress {
+    
+    public static final long BROADCAST_ADDRESS = 0xffffffffffffL;
     //Our prefix = E1
     private long addr;
     
@@ -39,7 +41,4 @@ public class MACAddress {
         return bytes;
     }
     
-    public static long getBroadcastAddress() {
-        return 0xffffffffffffL;
-    }
 }
