@@ -103,8 +103,8 @@ public class Router extends Thread implements RouterHook {
         String byeString = typeChar 
                            + remoteRealIP.getAddress().toString()
                            + ":" + remoteRealPort + " " 
-                           + ePort.getLocalIP().toString() + ":"
-                           + ePort.getLocalRealPort();               
+                           + ePort.getBound().toString() + ":"
+                           + ePort.getPort();               
         byte[] payload = new byte[byeString.length()];
         for( int i = 0; i < payload.length; i++ )
             payload[i] = (byte) byeString.charAt(i);
@@ -131,7 +131,7 @@ public class Router extends Thread implements RouterHook {
 //        //Identify that port
 //        EtherPort connectee = null;
 //        for( EtherPort e: ports ) {
-//            if( e.getLocalRealPort() == localRealPort ) {
+//            if( e.getPort() == localRealPort ) {
 //                connectee = e;
 //                break;
 //            }
@@ -199,7 +199,7 @@ public class Router extends Thread implements RouterHook {
     }
     
     private void killPort( EtherPort ePort ) {
-        int portIndex = ePort.getLocalVirtualPort();
+        int portIndex = ePort.getPortNum();
         
         //tell ePort to gracefully shut its threads and other processes down
         ePort.stopThreads();
@@ -222,8 +222,8 @@ public class Router extends Thread implements RouterHook {
     public void ip( int localVirtualPort, InetAddress localIP, 
                     String netMask ) {
         EtherPort ePort = ports.get(localVirtualPort);
-        ePort.setLocalIP(localIP);
-        ePort.setVirtualNetMask( new NetMask(netMask) );
+        ePort.setIP(localIP);
+        ePort.setNetMask( new NetMask(netMask) );
     }
     
     public void route( InetAddress virtualNetworkAddress, NetMask virtualNetMask,
@@ -234,7 +234,7 @@ public class Router extends Thread implements RouterHook {
         //and if so we are directly connected.
         boolean isDirect = false;
         for( EtherPort e: ports ) {
-            if( e != null && e.getLocalIP().equals(virtualGatewayAddress) ) {
+            if( e != null && e.getIP().equals(virtualGatewayAddress) ) {
                 isDirect = true;
                 break;
             }

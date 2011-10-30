@@ -1,3 +1,7 @@
+/** 
+* This class represents a virtual ethernet link between two hosts over UDP.
+* @author Drake, Ian, Justin
+*/
 
 import java.net.*;
 import java.io.*;
@@ -10,84 +14,129 @@ import java.util.zip.CRC32;
 public class EtherPort {
     final private LinkedBlockingQueue<DatagramPacket> outQueue;
     private RouterHook routerHook;
-    private int localRealPort, localVirtualPort, dstPort; 
-    private InetAddress localIP, dstAddr;
-    private MACAddress virtualMAC;
-    private NetMask virtualNetMask;
+    private int port, portNum, dstPort; 
+    private InetAddress dstAddr, bind, ifaceAddr;
+    private NetMask nm;
+    private MACAddress src;
     private DatagramSocket sock;
     private HashMap<Short, EventRegistration> typeListen;
     private boolean runThreads;
+    /**
+        * Makes a new EtherPort, listening on the specified port, on all interfaces
+        * @param port The port to be listened on
+        * @param portNum The identifier for this interface 
+        * @param src The MACAddress assigned to this interface
+        * @param routerHook The callback pointer for this interface
+    */
 
-    public EtherPort(int localRealPort, int localVirtualPort,
-                     MACAddress virtualMAC, RouterHook routerHook) {
+    public EtherPort(int port, int portNum,
+                         MACAddress src, RouterHook routerHook){
         this.routerHook = routerHook;
-        this.virtualMAC = virtualMAC;
-        this.localRealPort = localRealPort;
-        
+        this.src = src;
+        this.port = port;
         try{
-            sock = new DatagramSocket(localRealPort);
-        }
-        catch(SocketException e) {
-            System.out.println("Could not establish socket on local port " 
-                                + localRealPort);
-        }
-        catch(SecurityException e) {
-            System.out.println("Security exception establishing socket "
-                               + "on local port " + localRealPort);
-        }
-        
-        outQueue = new LinkedBlockingQueue<DatagramPacket>();
-        typeListen = new HashMap<Short, EventRegistration>();
-        startConnection();
-    }
-    public EtherPort(int localRealPort, int localVirtualPort, 
-                     InetAddress localIP, MACAddress virtualMAC, 
-                     RouterHook routerHook, NetMask virtualNetMask ) {
-        this.localRealPort = localRealPort; 
-        this.localIP = localIP;
-        this.virtualMAC = virtualMAC;
-        this.routerHook = routerHook;
-        this.virtualNetMask = virtualNetMask;
-        try{
-            sock = new DatagramSocket(localRealPort, localIP);
+            sock = new DatagramSocket(port);
         }
         catch(SocketException e){
             System.out.println("Could not establish socket on local port " 
-                                + localRealPort);
+                                + port);
+        }
+        catch(SecurityException e){
+            System.out.println("Security exception establishing socket "
+                               + "on local port " + port);
+        }
+        outQueue = new LinkedBlockingQueue<DatagramPacket>();
+        typeListen = new HashMap<Short, EventRegistration>();
+        startConnection();
+    }
+    /**
+        * Makes a new EtherPort, listening on the specified port, on a specified 
+          interface.
+        * @param port The port to be listened on
+        * @param portNum The identifier for this interface 
+        * @param src The MACAddress assigned to this interface
+        * @param routerHook The callback pointer for this interface
+        * @param iface The address of the interface to listen on.
+    */
+
+    public EtherPort(int port, int portNum, MACAddress src, 
+                     RouterHook routerHook, InetAddress iface){
+        this.port = port;
+        this.src = src;
+        iface = bind;
+        this.routerHook = routerHook;
+        try{
+            sock = new DatagramSocket(port, iface);
+        }
+        catch(SocketException e){
+            System.out.println("Could not establish socket on local port " 
+                                + port);
         }
         typeListen = new HashMap<Short, EventRegistration>();
         outQueue = new LinkedBlockingQueue<DatagramPacket>();
         startConnection();
     }
-    public void stopThreads(){
+    /**
+        * Safely stops the interface after sending pending transmits.
+    */
+    protected void stopThreads(){
         runThreads = false;
         while(outQueue.peek() != null) { } //wait to send everything
         sock.disconnect(); 
     }
-    public void startThreads(){
+    /**
+        * Begins transmission again on a halted interface.
+    */
+    protected void startThreads(){
         runThreads = true;
         // sock.connect()? later. 
     }
-    public void setDestIP(InetAddress dstAddr) {
+    /**
+        * Sets the endpoint of this interface
+        * @param dstAddr The new endpoint
+    */
+    protected void setDestIP(InetAddress dstAddr) {
         this.dstAddr = dstAddr;
     }
+    /**
+        * Returns the endpoint of this interface.
+    */
     public InetAddress getDestIP() {
         return dstAddr;
     }
+    /**
+        * Sets the listening port for this interface
+        * @param dstPort The port number to be listened on
+    */
     public void setDestPort(int dstPort) {
         this.dstPort = dstPort;
     }
+    /**
+        * Returns the listening port for this interface
+    */
     public int getDestPort() {
         return dstPort;
     }
+    /**
+        * Specifies whether or not this interface has an endpoint currently.
+    */
     public boolean hasEndpoint(){
         return dstAddr == null;
     }
-    public boolean addRegistration(short type, EventRegistration evt){
+    /**
+        * Adds a callback for the specified ethernet type
+        * @param type The ethernet type to listen for
+        * @param evt The callback for the specified type
+    */
+    protected boolean addRegistration(short type, EventRegistration evt){
         typeListen.put(new Short(type), evt);
         return true;
     }
-    public EtherFrame parseFrame(byte[] payload) throws IOException{
+    /**
+        * Parses a byte array into an EtherFrame
+        * @param payload The byte array containing the frame 
+    */
+    private EtherFrame parseFrame(byte[] payload) throws IOException{
         ByteBuffer bb = ByteBuffer.wrap(payload);
         int fcs = bb.getInt(payload.length-4);
         flipBits(payload);
@@ -97,14 +146,18 @@ public class EtherPort {
         short type = toShort(Arrays.copyOfRange(payload,21,24));
         byte[] data = Arrays.copyOfRange(payload,23,payload.length-4);
         EtherFrame rcvdFrame = new EtherFrame(dst,src,type,data);
-        //after FCS is complete
         int crc = compCRC(Arrays.copyOfRange(payload,9,payload.length-4));
-        if(crc != fcs) 
+        if(crc != fcs) {
+            System.out.println("Corrupt frame!");
             throw new IOException("Corrupt frame");
+        }
         //right now we'll just return it anyways since CRC is probably buggy
         return rcvdFrame; 
     }
     //making this private prevents "Overridable method in constructor" warning
+    /**
+        * Starts the transmit and recieve threads of the interface.
+    */
     private void startConnection(){
         runThreads = true;
         Thread receiveThread = new Thread (new Runnable() {
@@ -118,7 +171,13 @@ public class EtherPort {
         });
         sendThread.start();
     }
-    public void enqueueFrame(EtherFrame eth, InetAddress dstAddr, int dstPort){
+    /**
+        * Adds a frame to be transmitted.
+        * @param eth The EtherFrame to be enqueued
+        * @param dstAddr The destination IP for the packet
+        * @param dstPort The destination port for the packet
+    */
+    protected void enqueueFrame(EtherFrame eth, InetAddress dstAddr, int dstPort){
         byte[] frame = eth.asBytes();
         int crc = compCRC(Arrays.copyOfRange(frame,8,frame.length-4));
         eth.writeFCS(crc);
@@ -131,9 +190,35 @@ public class EtherPort {
         DatagramPacket pkt = new DatagramPacket(payload, payload.length,
                                                 dstAddr, dstPort);
         outQueue.offer(pkt);
-        System.out.println(Arrays.toString(pkt.getData()));
     }
-    public void enqueueCommand(byte[] payload, InetAddress dstAddr, int dstPort){
+    /**
+        * Adds a frame to be transmitted.
+        * @param dst The destination MACAddress for this frame
+        * @param type The type of this frame
+        * @param data The data payload of this frame
+    */
+    protected void enqueueFrame(MACAddress dst, short type, byte[] data){
+        EtherFrame eth = new EtherFrame(dst,src,type,data);
+        byte[] frame = eth.asBytes();
+        int crc = compCRC(Arrays.copyOfRange(frame,8,frame.length-4));
+        eth.writeFCS(crc);
+        frame = eth.asBytes();
+        byte[] payload = new byte[frame.length+1];
+        System.arraycopy(frame,0,payload,1,frame.length-4);
+        flipBits(payload);
+        payload[0] = (byte)'e';
+        System.arraycopy(frame,frame.length-4,payload,payload.length-4,4);
+        DatagramPacket pkt = new DatagramPacket(payload, payload.length,
+                                                dstAddr, dstPort);
+        outQueue.offer(pkt);
+    }
+    /**
+        * Adds a control command to be transmitted over the interface
+        * @param payload The payload of the command packet
+        * @param dstAddr The destination address for the packet
+        * @param dstPort The desitination port for the packet
+    */
+    protected void enqueueCommand(byte[] payload, InetAddress dstAddr, int dstPort){
         DatagramPacket pkt = new DatagramPacket(payload, payload.length, 
                                                 dstAddr, dstPort);
         outQueue.offer(pkt);
@@ -145,28 +230,23 @@ public class EtherPort {
             try{
                 sock.receive(rcvd);
                 int len = rcvd.getLength();
-                
-                if( buf[0]  == (byte) 'e' && 72 <= len && len <= 1526) {
+                if( buf[0]  == (byte) 'e' && 72<=len && len<=1526) {
                     byte[] frame = new byte[rcvd.getLength()];
                     System.arraycopy(rcvd.getData(),0,frame,0,rcvd.getLength());
                     EtherFrame eth = parseFrame(frame);
-                    EventRegistration evt = typeListen.get( 
-                                                     new Short(eth.getType()) );
-                    
+                    EventRegistration evt = typeListen.get(new Short(
+                                                           eth.getType()));
                     if( evt != null && 
-                          ( ( eth.getDst().getLongAddress() 
-                              == virtualMAC.getLongAddress() ) 
-                            ||
-                            ( eth.getDst().getLongAddress() 
-                              == MACAddress.BROADCAST_ADDRESS ) ) ) {
-                        evt.frameReceived(eth.getData()); 
-                    } //else, this isn't for us
+                          (eth.getDst().getLongAddress() == 
+                           src.getLongAddress() )    ) {
+                        evt.frameReceived(eth.getData()); //else, this isnt for us
+                    }
                 }
                 else { //if not an 'e' packet, give it to our controller
                     routerHook.commandRcvd((char)buf[0], 
                                            rcvd.getAddress(),
                                            rcvd.getPort(),
-                                           this.localVirtualPort,
+                                           this.portNum,
                                            buf);
                 }
             }
@@ -205,28 +285,51 @@ public class EtherPort {
                                 ((oldByte & 0x40)>>5) | ((oldByte & 0x80)>>7) );
         }
     }
-    
-    public void setLocalIP( InetAddress localIP ) {
-        this.localIP = localIP;
+    /**
+        * Returns the port this interface is listening on
+    */
+    public int getPort() {
+        return port;
     }
-    
-    public InetAddress getLocalIP() {
-        return localIP;
+    /**
+        * Returns the port identifier number of this interface.
+    */
+    public int getPortNum() {
+        return portNum;
     }
-    public int getLocalRealPort() {
-        return localRealPort;
+    /**
+        * Returns the IP of the interface this EtherPort is listening on,
+          if it is listening on a specific interface. 
+    */
+    public InetAddress getBound(){
+        return bind;
     }
-    public int getLocalVirtualPort() {
-        return localVirtualPort;
+    /**
+        * Sets the IP for the interface
+        * Note: This IP is internal, it is unrelated to the one in getLocalIP()
+        * It is used mainly as a data storage for the routing table. 
+    */
+    protected void setIP( InetAddress ip){
+        ip = ifaceAddr;
     }
-    public void setVirtualNetMask( NetMask vnm ) {
-        this.virtualNetMask = vnm;
-        //this.vnva openbsd ppcm = vnm;
+    /**
+        * Returns the IP of this interface.
+    */
+    public InetAddress getIP(){
+        return ifaceAddr;
     }
+    /**
+        * Sets the netmask for this interface.
+    */
+    protected void setNetMask( NetMask nm ){
+        this.nm = nm;
+    }
+    /**
+    */
     private short toShort(byte [] b){
-        short sh = 0;
+        short sh=0;
         sh |= b[0] & 0xFF;
-        sh <<= 8;
+        sh <<=8;
         sh |= b[1] & 0xFF;
         return sh;
    }
@@ -239,8 +342,7 @@ public class EtherPort {
         System.arraycopy(b,32,quot,32,b.length-32);
         CRC32 crc = new CRC32();
         crc.update(quot);
-        int notcomp = (int) crc.getValue(); //crc32 is 32 bits, oracle. 
-        ByteBuffer buf = ByteBuffer.allocate(4).putInt( (int)crc.getValue() );
+        ByteBuffer buf = ByteBuffer.allocate(4).putInt((int)crc.getValue());
         byte[] flip = buf.array();
         flipBits(flip);
         return buf.getInt(0);

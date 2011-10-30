@@ -69,34 +69,33 @@ public class EtherFrame
             //this won't happen!
         }
         return bytes.toByteArray();
+    
     }
+    /**
+        * Returns the data payload of this frame.
+    */
     public byte[] getData() {
         return data;
     }
-    /**
-        * Computes the Frame Check Sequence of the packet 
-    */ 
-    public int computeFCS(){
-        //this'll get done when he covers how to do CRC32
-        return 0;
-    }
-    /**
-        * Checks the FCS of the packet by computing it and comparing it to the 
-        * pre-recorded value 
-    */
-    public boolean checkFCS(){
-        return computeFCS() == fcs;
-    } 
     /**
         * Writes the FCS for a newly created packet
         * Shouldn't be used outside of packet creation.
     */
     public void writeFCS(int fcs){
         this.fcs = fcs;
-    } 
+    }
+    /**
+        * Returns the type of this frame.
+    */
     public short getType(){
         return type;
     }
+    /**
+        * Return the destination for this frame.
+    */
     public MACAddress getDst(){return dst;}
+    /**
+        * Return the source of this frame.
+    */
     public MACAddress getSrc(){return src;}
 }
