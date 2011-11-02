@@ -6,7 +6,7 @@ import java.net.SocketException;
 
 public class Router extends Thread implements RouterHook {
     
-    private ArrayList<EtherPort> ports;
+    private EtherPort[] ports;
     //private ARP_Engine arpEngine; once ARP works
     private HashMap<InetAddress, RoutingTableEntry> routingTable;
     private int nextRealPortNum, nextIpSuffix;
@@ -16,7 +16,7 @@ public class Router extends Thread implements RouterHook {
         nextRealPortNum = 4000;
         //nextIpSuffix = 0x0001;
         MACprefix = 0xE10000000000L;  //E1 = our group's prefix
-        ports = new ArrayList<EtherPort>(numPorts);
+        ports = new EtherPort[numPorts];
         //arpEngine = new ARP_Engine();
     }
     
@@ -25,7 +25,7 @@ public class Router extends Thread implements RouterHook {
                             int remoteRealPort, int localVirtualPort, 
                             byte[] buf) {
 
-        EtherPort ePort = ports.get(localVirtualPort);
+        EtherPort ePort = ports[localVirtualPort];
         
         switch(cmd) {
             case 'a': { //"Accept connection request from remote router"
@@ -130,7 +130,7 @@ public class Router extends Thread implements RouterHook {
     private int nextFreeVirtualPort() {
         int i = 0;
         
-        while( ports.get(i) != null )
+        while( ports[i] != null )
             i++;
         
         return i;
@@ -140,7 +140,8 @@ public class Router extends Thread implements RouterHook {
                          int realRemotePort ) {
         //Create a new port to deal with this connection
         try{
-            EtherPort newPort = createPort( jackNum, realRemotePort);
+            createPort( jackNum, realRemotePort);
+            EtherPort newPort = ports[jackNum];
             newPort.setDestIP(realRemoteIP);
             byte[] command = new byte[1];
             command[0] = (byte) 'c';
@@ -153,22 +154,22 @@ public class Router extends Thread implements RouterHook {
 
     protected void listen( int jackNum, int port){
         try{
-            EtherPort newPort = createPort( jackNum, port);
+            createPort( jackNum, port);
         }
         catch(SocketException e){
-            System.out.println("Couln't bind socket onto requested port.");
+            System.out.println("Couldn't bind socket onto requested port.");
         }
     }
     
-    protected EtherPort createPort( int localVirtualPort, int localRealPort )
+    protected void createPort( int localVirtualPort, int localRealPort )
               throws SocketException {
         //Gracefully stop and dereference the EtherPort currently at
         //index localVirtualPort
-        if( localVirtualPort <= ports.size()-1 
+        /*if( localVirtualPort <= ports.size()-1 
               && ports.get(localVirtualPort) != null ) {
             ports.get(localVirtualPort).stopThreads();
             ports.set(localVirtualPort, null);
-        }
+        }*/
         
         EtherPort newPort = new EtherPort(localRealPort,
                                           localVirtualPort,
@@ -176,12 +177,10 @@ public class Router extends Thread implements RouterHook {
                                                          localVirtualPort),
                                           this);
 
-        if( localVirtualPort <= ports.size()-1 )
+        /*if( localVirtualPort <= ports.size()-1 )
             ports.set(localVirtualPort, newPort);
-        else
-            ports.add(newPort);
-        
-        return newPort;
+        else*/
+        ports[localVirtualPort]=newPort;
     }
 
     private void killPort( EtherPort ePort ) {
@@ -190,13 +189,13 @@ public class Router extends Thread implements RouterHook {
         //tell ePort to gracefully shut its threads and other processes down
         ePort.stopThreads();
         //make the port eligible for garbage collection
-        ports.set(portIndex, null);
+        ports[portIndex]=null;
     }
     
     //Disconnects a port on our local router.
     protected void disconnect( int localVirtualPort ) {
         //send packet with 'd' message
-        EtherPort ePort = ports.get(localVirtualPort);
+        EtherPort ePort = ports[localVirtualPort];
         byte[] payload = new byte[1];
         payload[0] = 'd';
         ePort.enqueueCommand(payload, ePort.getDestIP(), ePort.getDestPort());
@@ -207,7 +206,7 @@ public class Router extends Thread implements RouterHook {
     
     protected void ip( int localVirtualPort, InetAddress localIP, 
                     String netMask ) {
-        EtherPort ePort = ports.get(localVirtualPort);
+        EtherPort ePort = ports[localVirtualPort];
         ePort.setIP(localIP);
         ePort.setNetMask( new NetMask(netMask) );
     }
@@ -218,7 +217,7 @@ public class Router extends Thread implements RouterHook {
         //I could be wrong about how this part works, but I'm thinking we look
         //through our ports, see if any match the virtualGatewayAddress (the "target"),
         //and if so we are directly connected.
-        EtherPort ePort = ports.get(jack);
+        EtherPort ePort = ports[jack];
         InetAddress virtualNetworkAddress = ePort.getIP();
 
         boolean isDirect = false;
@@ -236,7 +235,7 @@ public class Router extends Thread implements RouterHook {
         
     }
     protected void ethping( int jack, long dst){
-        EtherPort eth = ports.get(jack);
+        EtherPort eth = ports[jack];
         String tst = "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.";
         eth.enqueueFrame(new MACAddress(dst),(short)0x0801,tst.getBytes());
     }
