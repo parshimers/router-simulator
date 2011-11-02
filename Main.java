@@ -95,6 +95,14 @@ public class Main {
 
                 }
 
+                else if(userInput.equalsIgnoreCase("ethping")){
+                    System.out.print("jack: ");
+                    int jack = Integer.parseInt(in.readLine());
+                    System.out.println("target mac: ");
+                    long mac = Long.parseLong(in.readLine());
+                    rt.ethping(jack,mac);
+                }
+
                 else if(userInput.equalsIgnoreCase("quit"))
                     quit = true;
 

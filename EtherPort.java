@@ -231,6 +231,12 @@ public class EtherPort {
                            src.getLongAddress() )    ) {
                         evt.frameReceived(eth.getData()); //else, this isnt for us
                     }
+                    else if(evt == null && 
+                            eth.getDst().getLongAddress() == src.getLongAddress()
+                            && eth.getType() == (short)0x0801)
+                    {
+                        System.out.println(eth.getData());
+                    }
                 }
                 else { //if not an 'e' packet, give it to our controller
                     routerHook.commandRcvd((char)buf[0], 

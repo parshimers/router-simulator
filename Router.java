@@ -10,12 +10,12 @@ public class Router extends Thread implements RouterHook {
     //private ARP_Engine arpEngine; once ARP works
     private HashMap<InetAddress, RoutingTableEntry> routingTable;
     private int nextRealPortNum, nextIpSuffix;
-    private long nextMacLong;
+    private long MACprefix;
 
     public Router( int numPorts ) {
         nextRealPortNum = 4000;
         //nextIpSuffix = 0x0001;
-        nextMacLong = 0xE10000000001L;  //E1 = our group's prefix
+        MACprefix = 0xE10000000000L;  //E1 = our group's prefix
         ports = new ArrayList<EtherPort>(numPorts);
         //arpEngine = new ARP_Engine();
     }
@@ -141,6 +141,7 @@ public class Router extends Thread implements RouterHook {
         //Create a new port to deal with this connection
         try{
             EtherPort newPort = createPort( jackNum, realRemotePort);
+            newPort.setDestIP(realRemoteIP);
             byte[] command = new byte[1];
             command[0] = (byte) 'c';
             newPort.enqueueCommand(command, realRemoteIP, realRemotePort);
@@ -171,8 +172,10 @@ public class Router extends Thread implements RouterHook {
         
         EtherPort newPort = new EtherPort(localRealPort,
                                           localVirtualPort,
-                                          new MACAddress(nextMacLong++), 
+                                          new MACAddress(MACprefix+
+                                                         localVirtualPort),
                                           this);
+
         if( localVirtualPort <= ports.size()-1 )
             ports.set(localVirtualPort, newPort);
         else
@@ -180,7 +183,7 @@ public class Router extends Thread implements RouterHook {
         
         return newPort;
     }
-    
+
     private void killPort( EtherPort ePort ) {
         int portIndex = ePort.getPortNum();
         
@@ -231,6 +234,11 @@ public class Router extends Thread implements RouterHook {
                                                        isDirect );
         routingTable.put(virtualNetworkAddress, rte);
         
+    }
+    protected void ethping( int jack, long dst){
+        EtherPort eth = ports.get(jack);
+        String tst = "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.";
+        eth.enqueueFrame(new MACAddress(dst),(short)0x0801,tst.getBytes());
     }
 
     protected void stopAllPorts() {
