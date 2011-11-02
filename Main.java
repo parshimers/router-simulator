@@ -13,7 +13,9 @@ import java.net.InetAddress;
 public class Main {
     private static boolean quit;
     public static void main(String[] args) {
-        //
+        Router rt;
+        if(args.length>1) rt = new Router(Integer.parseInt(args[1]));
+        else rt = new Router(10); 
         System.out.println("\n\nWelcome to the Virtural Router Project. \nType 'help' for commands.");
 
         while (quit != true)
@@ -37,6 +39,10 @@ public class Main {
                     realIp = in.readLine();
                     System.out.println("<real port address> :");
                     realPort = in.readLine();
+                    int jack = Integer.parseInt(virtualPort);
+                    InetAddress dst = InetAddress.getByName(realIp);
+                    int port = Integer.parseInt(realPort);
+                    rt.connect(jack,dst,port);
                 }
 
                 else if(userInput.equalsIgnoreCase("listen"))
@@ -45,12 +51,17 @@ public class Main {
                     virtualPort = in.readLine();
                     System.out.println("<real port number> ");
                     realPort = in.readLine();
+                    int jack = Integer.parseInt(virtualPort);
+                    int port = Integer.parseInt(realPort);
+                    rt.listen(jack,port);
                 }
 
                 else if(userInput.equalsIgnoreCase("disconnect"))
                 {
                     System.out.println("<virtual port number> : ");
                     virtualPort = in.readLine();
+                    int jack = Integer.parseInt(virtualPort);
+                    rt.disconnect(jack);
                 }
                 else if(userInput.equalsIgnoreCase("ip"))
                 {
@@ -60,6 +71,9 @@ public class Main {
                     virtualIp = in.readLine();
                     System.out.println("<virtual net mask> : " );
                     virtualMask = in.readLine();
+                    int jack = Integer.parseInt(virtualPort);
+                    InetAddress ip = InetAddress.getByName(virtualIp);
+                    rt.ip(jack,ip,virtualMask);
                 }
 
                 else if(userInput.equalsIgnoreCase("route"))
@@ -70,6 +84,10 @@ public class Main {
                     virtualMask = in.readLine();
                     System.out.println("<virtual gateway address> : ");
                     virtualGate = in.readLine();
+                    int jack = Integer.parseInt(virtualPort);
+                    NetMask nm = new NetMask(virtualMask);
+                    InetAddress gw = InetAddress.getByName(virtualGate);
+                    rt.route(jack,nm,gw);
                 }
 
                 else if(userInput.equalsIgnoreCase("show config"))

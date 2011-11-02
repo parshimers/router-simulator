@@ -30,21 +30,11 @@ public class EtherPort {
     */
 
     public EtherPort(int port, int portNum,
-                         MACAddress src, RouterHook routerHook){
+                     MACAddress src, RouterHook routerHook) throws SocketException{
         this.routerHook = routerHook;
         this.src = src;
         this.port = port;
-        try{
-            sock = new DatagramSocket(port);
-        }
-        catch(SocketException e){
-            System.out.println("Could not establish socket on local port " 
-                                + port);
-        }
-        catch(SecurityException e){
-            System.out.println("Security exception establishing socket "
-                               + "on local port " + port);
-        }
+        sock = new DatagramSocket(port);
         outQueue = new LinkedBlockingQueue<DatagramPacket>();
         typeListen = new HashMap<Short, EventRegistration>();
         startConnection();

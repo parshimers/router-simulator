@@ -2,11 +2,12 @@
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.net.SocketException;
 
 public class Router extends Thread implements RouterHook {
     
     private ArrayList<EtherPort> ports;
-    private ARP_Engine arpEngine;
+    //private ARP_Engine arpEngine; once ARP works
     private HashMap<InetAddress, RoutingTableEntry> routingTable;
     private int nextRealPortNum, nextIpSuffix;
     private long nextMacLong;
@@ -16,7 +17,7 @@ public class Router extends Thread implements RouterHook {
         //nextIpSuffix = 0x0001;
         nextMacLong = 0xE10000000001L;  //E1 = our group's prefix
         ports = new ArrayList<EtherPort>(numPorts);
-        arpEngine = new ARP_Engine();
+        //arpEngine = new ARP_Engine();
     }
     
     @Override
@@ -35,7 +36,8 @@ public class Router extends Thread implements RouterHook {
                 //Remote host has accepted our connection, so set it as destination
                 ePort.setDestIP(remoteRealIP);
                 ePort.setDestPort(remoteRealPort);
-                
+                System.out.println("Accepted connection from"
+                                   +remoteRealIP.toString());
                 break;
             }
             case 'b': { //"Bye"
@@ -64,6 +66,9 @@ public class Router extends Thread implements RouterHook {
                     ePort.enqueueCommand(payload, remoteRealIP, remoteRealPort);
                     ePort.setDestIP(remoteRealIP);
                     ePort.setDestPort(remoteRealPort);
+                    System.out.println("Trying to connect to: "+
+                                        remoteRealIP.toString());
+
                 }
 
                 break;
@@ -121,24 +126,6 @@ public class Router extends Thread implements RouterHook {
         return payload;
     }
     
-    //Thought we needed this, but on second thought doesn't seem like it...
-//    private EtherPort findConnectee(byte[] buf) {
-//        int localRealPort = Integer.parseInt( (char) buf[32] 
-//                                                      + (char) buf[33] 
-//                                                      + (char) buf[34] 
-//                                                      + (char) buf[35] + "" );
-//                
-//        //Identify that port
-//        EtherPort connectee = null;
-//        for( EtherPort e: ports ) {
-//            if( e.getPort() == localRealPort ) {
-//                connectee = e;
-//                break;
-//            }
-//        }
-//        
-//        return connectee;
-//    }
     
     private int nextFreeVirtualPort() {
         int i = 0;
@@ -149,34 +136,31 @@ public class Router extends Thread implements RouterHook {
         return i;
     }
     
-    private int nextFreeRealPort() {
-        return nextRealPortNum++;
-    }
-    
-    //Actually we might not need this variable and method, but leaving them here in case they're useful.
-//    private static final String IP_PREFIX = "176.37";
-//    private String getNextIpSuffix() {
-//        int firstOctet = 0xFF & nextIpSuffix;
-//        int secondOctet = (0xFF00 & nextIpSuffix) >> 8;
-//        nextIpSuffix++;
-//        return Integer.toString(secondOctet) + "." 
-//                + Integer.toString(firstOctet);
-//    }
-    
-    public void connect( int virtualRemotePort, InetAddress realRemoteIP,
+    protected void connect( int jackNum, InetAddress realRemoteIP,
                          int realRemotePort ) {
-        int virtualPort = nextFreeVirtualPort();
-        
         //Create a new port to deal with this connection
-        EtherPort newPort = createPort( virtualPort, nextFreeRealPort() );
-        
-        //do we need to pass the virtualRemotePort as well?
-        byte[] command = new byte[1];
-        command[0] = (byte) 'c';
-        newPort.enqueueCommand(command, realRemoteIP, realRemotePort);
+        try{
+            EtherPort newPort = createPort( jackNum, realRemotePort);
+            byte[] command = new byte[1];
+            command[0] = (byte) 'c';
+            newPort.enqueueCommand(command, realRemoteIP, realRemotePort);
+        }
+        catch(SocketException e){
+            System.out.println("Couldn't bind socket on requested port.");
+        }
+    }
+
+    protected void listen( int jackNum, int port){
+        try{
+            EtherPort newPort = createPort( jackNum, port);
+        }
+        catch(SocketException e){
+            System.out.println("Couln't bind socket onto requested port.");
+        }
     }
     
-    public EtherPort createPort( int localVirtualPort, int localRealPort ) {
+    protected EtherPort createPort( int localVirtualPort, int localRealPort )
+              throws SocketException {
         //Gracefully stop and dereference the EtherPort currently at
         //index localVirtualPort
         if( localVirtualPort <= ports.size()-1 
@@ -189,7 +173,6 @@ public class Router extends Thread implements RouterHook {
                                           localVirtualPort,
                                           new MACAddress(nextMacLong++), 
                                           this);
-        
         if( localVirtualPort <= ports.size()-1 )
             ports.set(localVirtualPort, newPort);
         else
@@ -208,7 +191,7 @@ public class Router extends Thread implements RouterHook {
     }
     
     //Disconnects a port on our local router.
-    public void disconnect( int localVirtualPort ) {
+    protected void disconnect( int localVirtualPort ) {
         //send packet with 'd' message
         EtherPort ePort = ports.get(localVirtualPort);
         byte[] payload = new byte[1];
@@ -219,19 +202,22 @@ public class Router extends Thread implements RouterHook {
         //is needed in this method
     }
     
-    public void ip( int localVirtualPort, InetAddress localIP, 
+    protected void ip( int localVirtualPort, InetAddress localIP, 
                     String netMask ) {
         EtherPort ePort = ports.get(localVirtualPort);
         ePort.setIP(localIP);
         ePort.setNetMask( new NetMask(netMask) );
     }
     
-    public void route( InetAddress virtualNetworkAddress, NetMask virtualNetMask,
+    protected void route( int jack, NetMask virtualNetMask,
                        InetAddress virtualGatewayAddress ) {
         
         //I could be wrong about how this part works, but I'm thinking we look
         //through our ports, see if any match the virtualGatewayAddress (the "target"),
         //and if so we are directly connected.
+        EtherPort ePort = ports.get(jack);
+        InetAddress virtualNetworkAddress = ePort.getIP();
+
         boolean isDirect = false;
         for( EtherPort e: ports ) {
             if( e != null && e.getIP().equals(virtualGatewayAddress) ) {
@@ -246,10 +232,39 @@ public class Router extends Thread implements RouterHook {
         routingTable.put(virtualNetworkAddress, rte);
         
     }
-    
-    public void stopAllPorts() {
+
+    protected void stopAllPorts() {
         for(EtherPort e: ports)
             e.stopThreads();
     }
     
 }
+//Thought we needed this, but on second thought doesn't seem like it...
+//    private EtherPort findConnectee(byte[] buf) {
+//        int localRealPort = Integer.parseInt( (char) buf[32] 
+//                                                      + (char) buf[33] 
+//                                                      + (char) buf[34] 
+//                                                      + (char) buf[35] + "" );
+//                
+//        //Identify that port
+//        EtherPort connectee = null;
+//        for( EtherPort e: ports ) {
+//            if( e.getPort() == localRealPort ) {
+//                connectee = e;
+//                break;
+//            }
+//        }
+//        
+//        return connectee;
+//    }
+
+//Actually we might not need this variable and method, but leaving them here in case they're useful.
+//    private static final String IP_PREFIX = "176.37";
+//    private String getNextIpSuffix() {
+//        int firstOctet = 0xFF & nextIpSuffix;
+//        int secondOctet = (0xFF00 & nextIpSuffix) >> 8;
+//        nextIpSuffix++;
+//        return Integer.toString(secondOctet) + "." 
+//                + Integer.toString(firstOctet);
+//    }
+
