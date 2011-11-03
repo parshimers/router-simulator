@@ -23,8 +23,9 @@ public class Router extends Thread implements RouterHook {
     @Override
     public void commandRcvd(char cmd, InetAddress remoteRealIP, 
                             int remoteRealPort, int jack, byte[] buf) {
-
+        
         EtherPort ePort = ports[jack];
+        System.out.println(cmd);
         switch(cmd) {
             case 'a': { //"Accept connection request from remote router"
 
