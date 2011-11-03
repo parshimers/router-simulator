@@ -22,18 +22,14 @@ public class Router extends Thread implements RouterHook {
     
     @Override
     public void commandRcvd(char cmd, InetAddress remoteRealIP, 
-                            int remoteRealPort, int localVirtualPort, 
-                            byte[] buf) {
+                            int remoteRealPort, int jack, byte[] buf) {
 
-        EtherPort ePort = ports[localVirtualPort];
-        
+        EtherPort ePort = ports[jack];
+        System.out.println(ePort == null); 
+        System.out.println(jack);
         switch(cmd) {
             case 'a': { //"Accept connection request from remote router"
 
-                //Question: why does Wiegley specify the whole 'a' packet structure
-                //on the sheet? Seems like we can just get that info from the datagram...
-                
-                //Remote host has accepted our connection, so set it as destination
                 ePort.setDestIP(remoteRealIP);
                 ePort.setDestPort(remoteRealPort);
                 System.out.println("Accepted connection from"
@@ -43,10 +39,7 @@ public class Router extends Thread implements RouterHook {
             case 'b': { //"Bye"
                 
                 //Same question as in 'a'
-                
-                //Safely delete this port
                 killPort(ePort);
-                
                 break;
             }
             case 'c': { //"Connection requested by remote router"           
@@ -161,7 +154,7 @@ public class Router extends Thread implements RouterHook {
         }
     }
     
-    protected void createPort( int localVirtualPort, int localRealPort )
+    protected void createPort( int jack, int localRealPort )
               throws SocketException {
         //Gracefully stop and dereference the EtherPort currently at
         //index localVirtualPort
@@ -170,21 +163,16 @@ public class Router extends Thread implements RouterHook {
             ports.get(localVirtualPort).stopThreads();
             ports.set(localVirtualPort, null);
         }*/
-        
-        EtherPort newPort = new EtherPort(localRealPort,
-                                          localVirtualPort,
-                                          new MACAddress(MACprefix+
-                                                         localVirtualPort),
-                                          this);
-
+        MACAddress mac = new MACAddress(MACprefix+jack);
+        EtherPort newPort = new EtherPort(localRealPort, jack, mac, this);
         /*if( localVirtualPort <= ports.size()-1 )
             ports.set(localVirtualPort, newPort);
         else*/
-        ports[localVirtualPort]=newPort;
+        ports[jack]=newPort;
     }
 
     private void killPort( EtherPort ePort ) {
-        int portIndex = ePort.getPortNum();
+        int portIndex = ePort.getJack();
         
         //tell ePort to gracefully shut its threads and other processes down
         ePort.stopThreads();

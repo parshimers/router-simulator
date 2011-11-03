@@ -14,7 +14,7 @@ import java.util.zip.CRC32;
 public class EtherPort {
     final private LinkedBlockingQueue<DatagramPacket> outQueue;
     private RouterHook routerHook;
-    private int port, portNum, dstPort; 
+    private int port, jack, dstPort; 
     private InetAddress dstAddr, bind, ifaceAddr;
     private NetMask nm;
     private MACAddress src;
@@ -24,15 +24,16 @@ public class EtherPort {
     /**
         * Makes a new EtherPort, listening on the specified port, on all interfaces
         * @param port The port to be listened on
-        * @param portNum The identifier for this interface 
+        * @param jack The identifier for this interface 
         * @param src The MACAddress assigned to this interface
         * @param routerHook The callback pointer for this interface
     */
 
-    public EtherPort(int port, int portNum,
+    public EtherPort(int port, int jack,
                      MACAddress src, RouterHook routerHook) throws SocketException{
         this.routerHook = routerHook;
         this.src = src;
+        this.jack=jack;
         this.port = port;
         sock = new DatagramSocket(port);
         outQueue = new LinkedBlockingQueue<DatagramPacket>();
@@ -43,17 +44,18 @@ public class EtherPort {
         * Makes a new EtherPort, listening on the specified port, on a specified 
           interface.
         * @param port The port to be listened on
-        * @param portNum The identifier for this interface 
+        * @param jack The identifier for this interface 
         * @param src The MACAddress assigned to this interface
         * @param routerHook The callback pointer for this interface
         * @param iface The address of the interface to listen on.
     */
 
-    public EtherPort(int port, int portNum, MACAddress src, 
+    public EtherPort(int port, int jack, MACAddress src, 
                      RouterHook routerHook, InetAddress iface){
         this.port = port;
         this.src = src;
         iface = bind;
+        this.jack=jack;
         this.routerHook = routerHook;
         try{
             sock = new DatagramSocket(port, iface);
@@ -111,7 +113,7 @@ public class EtherPort {
         * Specifies whether or not this interface has an endpoint currently.
     */
     public boolean hasEndpoint(){
-        return dstAddr == null;
+        return (dstAddr == null);
     }
     /**
         * Adds a callback for the specified ethernet type
@@ -242,7 +244,7 @@ public class EtherPort {
                     routerHook.commandRcvd((char)buf[0], 
                                            rcvd.getAddress(),
                                            rcvd.getPort(),
-                                           this.portNum,
+                                           getJack(),
                                            buf);
                 }
             }
@@ -290,8 +292,8 @@ public class EtherPort {
     /**
         * Returns the port identifier number of this interface.
     */
-    public int getPortNum() {
-        return portNum;
+    public int getJack() {
+        return jack;
     }
     /**
         * Returns the IP of the interface this EtherPort is listening on,
