@@ -25,8 +25,6 @@ public class Router extends Thread implements RouterHook {
                             int remoteRealPort, int jack, byte[] buf) {
 
         EtherPort ePort = ports[jack];
-        System.out.println(cmd);
-        System.out.println(ePort.hasEndpoint());
         switch(cmd) {
             case 'a': { //"Accept connection request from remote router"
 
