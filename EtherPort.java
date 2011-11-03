@@ -97,13 +97,6 @@ public class EtherPort {
         return dstAddr;
     }
     /**
-        * Sets the listening port for this interface
-        * @param dstPort The port number to be listened on
-    */
-    public void setDestPort(int dstPort) {
-        this.dstPort = dstPort;
-    }
-    /**
         * Returns the listening port for this interface
     */
     public int getDestPort() {

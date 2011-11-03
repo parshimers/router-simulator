@@ -30,9 +30,9 @@ public class Router extends Thread implements RouterHook {
             case 'a': { //"Accept connection request from remote router"
 
                 ePort.setDestIP(remoteRealIP);
-                ePort.setDestPort(remoteRealPort);
                 System.out.println("Accepted connection from: "
                                    +remoteRealIP.toString()+" on jack "+jack);
+                break;
             }
             case 'b': { //"Bye"
                 
@@ -54,7 +54,6 @@ public class Router extends Thread implements RouterHook {
                     byte[] payload = {(byte)'a'};
                     ePort.enqueueCommand(payload, remoteRealIP, remoteRealPort);
                     ePort.setDestIP(remoteRealIP);
-                    ePort.setDestPort(remoteRealPort);
                     System.out.println("Accepting connection from: "+ 
                                         remoteRealIP.toString()+ " on jack "+jack);
                 }
