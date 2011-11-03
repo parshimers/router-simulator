@@ -113,7 +113,7 @@ public class EtherPort {
         * Specifies whether or not this interface has an endpoint currently.
     */
     public boolean hasEndpoint(){
-        return (dstAddr == null);
+        return !(dstAddr == null);
     }
     /**
         * Adds a callback for the specified ethernet type
@@ -237,7 +237,7 @@ public class EtherPort {
                             eth.getDst().getLongAddress() == src.getLongAddress()
                             && eth.getType() == (short)0x0801)
                     {
-                        System.out.println(eth.getData());
+                        System.out.println(new String(eth.getData()));
                     }
                 }
                 else { //if not an 'e' packet, give it to our controller

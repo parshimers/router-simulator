@@ -25,14 +25,15 @@ public class Router extends Thread implements RouterHook {
                             int remoteRealPort, int jack, byte[] buf) {
 
         EtherPort ePort = ports[jack];
+        System.out.println(cmd);
+        System.out.println(ePort.hasEndpoint());
         switch(cmd) {
             case 'a': { //"Accept connection request from remote router"
 
                 ePort.setDestIP(remoteRealIP);
                 ePort.setDestPort(remoteRealPort);
-                System.out.println("Accepted connection from"
-                                   +remoteRealIP.toString());
-                break;
+                System.out.println("Accepted connection from: "
+                                   +remoteRealIP.toString()+" on jack "+jack);
             }
             case 'b': { //"Bye"
                 
@@ -51,15 +52,12 @@ public class Router extends Thread implements RouterHook {
                 }
                 //else create and send 'a' response frame in response
                 else {
-                    byte[] payload = createAcceptGoodbye(ePort, remoteRealIP,
-                                                         remoteRealPort, 'a');
-
+                    byte[] payload = {(byte)'a'};
                     ePort.enqueueCommand(payload, remoteRealIP, remoteRealPort);
                     ePort.setDestIP(remoteRealIP);
                     ePort.setDestPort(remoteRealPort);
-                    System.out.println("Trying to connect to: "+
-                                        remoteRealIP.toString());
-
+                    System.out.println("Accepting connection from: "+ 
+                                        remoteRealIP.toString()+ " on jack "+jack);
                 }
 
                 break;
@@ -137,6 +135,7 @@ public class Router extends Thread implements RouterHook {
             byte[] command = new byte[1];
             command[0] = (byte) 'c';
             newPort.enqueueCommand(command, realRemoteIP, realRemotePort);
+            System.out.println("Trying to connect to: "+realRemoteIP.toString());
         }
         catch(SocketException e){
             System.out.println("Couldn't bind socket on requested port.");
@@ -146,6 +145,7 @@ public class Router extends Thread implements RouterHook {
     protected void listen( int jackNum, int port){
         try{
             createPort( jackNum, port);
+            System.out.println("Listening on jack :"+jackNum+" ...");
         }
         catch(SocketException e){
             System.out.println("Couldn't bind socket onto requested port.");
