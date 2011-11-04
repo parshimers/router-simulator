@@ -47,12 +47,12 @@ public class Router extends Thread implements RouterHook {
                     String rejectString = "currently connected elsewhere";
                     
                     ePort.enqueueCommand(createRejectionMessage(rejectString), 
-                                         remoteRealIP, remoteRealPort);
+                                         remoteRealIP);
                 }
                 //else create and send 'a' response frame in response
                 else {
                     byte[] payload = {(byte)'a'};
-                    ePort.enqueueCommand(payload, remoteRealIP, remoteRealPort);
+                    ePort.enqueueCommand(payload, remoteRealIP);
                     ePort.setDestIP(remoteRealIP);
                     System.out.println("Accepting connection from: "+ 
                                         remoteRealIP.toString()+ " on jack "+jack);
@@ -68,7 +68,7 @@ public class Router extends Thread implements RouterHook {
                     byte[] payload = createAcceptGoodbye(ePort, remoteRealIP,
                                                          remoteRealPort, 'b');
 
-                    ePort.enqueueCommand(payload, remoteRealIP, remoteRealPort);
+                    ePort.enqueueCommand(payload, remoteRealIP);
                     killPort(ePort);
                 }
                 
@@ -79,7 +79,7 @@ public class Router extends Thread implements RouterHook {
                 String rejectString = "sorry, don't want to talk now";
                 
                 ePort.enqueueCommand(createRejectionMessage(rejectString), 
-                                     remoteRealIP, remoteRealPort);              
+                                     remoteRealIP);              
                 
                 break;
             }
@@ -132,7 +132,7 @@ public class Router extends Thread implements RouterHook {
             newPort.setDestIP(realRemoteIP);
             byte[] command = new byte[1];
             command[0] = (byte) 'c';
-            newPort.enqueueCommand(command, realRemoteIP, realRemotePort);
+            newPort.enqueueCommand(command, realRemoteIP);
             System.out.println("Trying to connect to: "+realRemoteIP.toString());
         }
         catch(SocketException e){
@@ -182,7 +182,7 @@ public class Router extends Thread implements RouterHook {
         EtherPort ePort = ports[localVirtualPort];
         byte[] payload = new byte[1];
         payload[0] = 'd';
-        ePort.enqueueCommand(payload, ePort.getDestIP(), ePort.getDestPort());
+        ePort.enqueueCommand(payload, ePort.getDestIP());
         
         //port will be "killed" when 'b' reply is received, so no further code
         //is needed in this method
@@ -223,7 +223,6 @@ public class Router extends Thread implements RouterHook {
         String tst = "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.";
         eth.enqueueFrame(new MACAddress(dst),(short)0x0801,tst.getBytes());
     }
-
     protected void stopAllPorts() {
         for(EtherPort e: ports)
             e.stopThreads();

@@ -14,7 +14,7 @@ import java.util.zip.CRC32;
 public class EtherPort {
     final private LinkedBlockingQueue<DatagramPacket> outQueue;
     private RouterHook routerHook;
-    private int port, jack, dstPort; 
+    private int port, jack; 
     private InetAddress dstAddr, bind, ifaceAddr;
     private NetMask nm;
     private MACAddress src;
@@ -74,7 +74,7 @@ public class EtherPort {
     protected void stopThreads(){
         runThreads = false;
         while(outQueue.peek() != null) { } //wait to send everything
-        sock.disconnect(); 
+        sock.close(); 
     }
     /**
         * Begins transmission again on a halted interface.
@@ -100,7 +100,7 @@ public class EtherPort {
         * Returns the listening port for this interface
     */
     public int getDestPort() {
-        return dstPort;
+        return port;
     }
     /**
         * Specifies whether or not this interface has an endpoint currently.
@@ -160,9 +160,8 @@ public class EtherPort {
         * Adds a frame to be transmitted.
         * @param eth The EtherFrame to be enqueued
         * @param dstAddr The destination IP for the packet
-        * @param dstPort The destination port for the packet
     */
-    protected void enqueueFrame(EtherFrame eth, InetAddress dstAddr, int dstPort){
+    protected void enqueueFrame(EtherFrame eth, InetAddress dstAddr){
         byte[] frame = eth.asBytes();
         int crc = compCRC(Arrays.copyOfRange(frame,8,frame.length-4));
         eth.writeFCS(crc);
@@ -173,8 +172,9 @@ public class EtherPort {
         payload[0] = (byte)'e';
         System.arraycopy(frame,frame.length-4,payload,payload.length-4,4);
         DatagramPacket pkt = new DatagramPacket(payload, payload.length,
-                                                dstAddr, dstPort);
+                                                dstAddr, port);
         outQueue.offer(pkt);
+        System.out.println("Packet offered");
     }
     /**
         * Adds a frame to be transmitted.
@@ -194,18 +194,18 @@ public class EtherPort {
         payload[0] = (byte)'e';
         System.arraycopy(frame,frame.length-4,payload,payload.length-4,4);
         DatagramPacket pkt = new DatagramPacket(payload, payload.length,
-                                                dstAddr, dstPort);
+                                                dstAddr, port);
         outQueue.offer(pkt);
+        System.out.println("Packet offered to "+ dstAddr.toString());
     }
     /**
         * Adds a control command to be transmitted over the interface
         * @param payload The payload of the command packet
         * @param dstAddr The destination address for the packet
-        * @param dstPort The desitination port for the packet
     */
-    protected void enqueueCommand(byte[] payload, InetAddress dstAddr, int dstPort){
+    protected void enqueueCommand(byte[] payload, InetAddress dstAddr){
         DatagramPacket pkt = new DatagramPacket(payload, payload.length, 
-                                                dstAddr, dstPort);
+                                                dstAddr,port);
         outQueue.offer(pkt);
     }
     private void receiveFrame(){
@@ -247,24 +247,16 @@ public class EtherPort {
         }
     }
     private void sendFrame(){
+        DatagramPacket currpkt=null;
         while(runThreads){
-            DatagramPacket currpkt=null;
             try{
                 currpkt = outQueue.take();
             }
             catch(InterruptedException e){
-                System.out.println("interrupted");
+                System.out.println(e);
             }
-            while(currpkt != null){
-                try{ sock.send(currpkt); }
-                catch(IOException e){ 
-                    //handle this properly later
-                }
-                try{ currpkt = outQueue.take(); }
-                catch(InterruptedException e){ 
-                    //ditto
-                }
-            }
+            try{ sock.send(currpkt);}
+            catch(IOException e){System.out.println(e);}
         }
     }
     private static void flipBits( byte[] bytes ) {
