@@ -7,7 +7,7 @@ import java.net.SocketException;
 public class Router extends Thread implements RouterHook {
     
     private EtherPort[] ports;
-    //private ARP_Engine arpEngine; once ARP works
+    private ARP_Engine arpEngine;
     private HashMap<InetAddress, RoutingTableEntry> routingTable;
     private int nextRealPortNum, nextIpSuffix;
     private long MACprefix;
@@ -17,9 +17,8 @@ public class Router extends Thread implements RouterHook {
         //nextIpSuffix = 0x0001;
         MACprefix = 0xE10000000000L;  //E1 = our group's prefix
         ports = new EtherPort[numPorts];
-        //arpEngine = new ARP_Engine();
+        arpEngine = new ARP_Engine(ports);
     }
-    
     @Override
     public void commandRcvd(char cmd, InetAddress remoteRealIP, 
                             int remoteRealPort, int jack, byte[] buf) {

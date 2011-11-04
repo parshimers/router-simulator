@@ -224,7 +224,7 @@ public class EtherPort {
                     if( evt != null && 
                           (eth.getDst().getLongAddress() == 
                            src.getLongAddress() )    ) {
-                        evt.frameReceived(eth.getData()); //else, this isnt for us
+                        evt.frameReceived(eth.getData(),jack);
                     }
                     else if(evt == null && 
                             eth.getDst().getLongAddress() == src.getLongAddress()
