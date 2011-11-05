@@ -230,7 +230,7 @@ public class Router extends Thread implements RouterHook {
         for(EtherPort e: ports)
             e.stopThreads();
     }
-    protected void findMAC( InetAddress tpa,int jack){
+    protected void findMAC( InetAddress tpa, int jack ){
         EtherPort eth = ports[jack];
         arpEngine.requestMAC(eth.getMAC(),eth.getIP(),tpa,jack);
     }

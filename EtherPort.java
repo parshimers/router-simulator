@@ -288,7 +288,7 @@ public class EtherPort {
         * It is used mainly as a data storage for the routing table. 
     */
     protected void setIP( InetAddress ip){
-        ip = ifaceAddr;
+        ifaceAddr = ip;
     }
     /**
         * Returns the IP of this interface.

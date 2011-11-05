@@ -39,7 +39,7 @@ public class ARPPacket{
         
         byte[] thaBytes = new byte[6];
         System.arraycopy(frameBytes, 18, thaBytes, 0, 6);
-        sha = new MACAddress(thaBytes);
+        tha = new MACAddress(thaBytes);
         
         byte[] tpaBytes = new byte[4];
         tpaBytes[0] = frameBytes[27];
@@ -54,6 +54,7 @@ public class ARPPacket{
     public ARPPacket(MACAddress sha, InetAddress spa, InetAddress tpa){
         this.sha = sha;
         this.spa = spa;
+        this.tha = new MACAddress(0L);
         this.tpa = tpa;
         oper = REQUEST; 
     }

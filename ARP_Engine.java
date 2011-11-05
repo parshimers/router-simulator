@@ -5,19 +5,19 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 public class ARP_Engine implements EventRegistration {
     
-    private LinkedBlockingQueue<ARPPacket> outQueue;
     private static HashMap<InetAddress, MACAddress> arpCache;
-    private Thread queueThread;
     private final EtherPort[] ports;
     
     public ARP_Engine(EtherPort[] ports) {
-        outQueue = new LinkedBlockingQueue<ARPPacket>();
         arpCache = new HashMap<InetAddress, MACAddress>();
         this.ports = ports;
         //this is gonna be harder to make a thread than not right now
     }
+    
     @Override
     public void frameReceived(byte[] frameData, int jack) {
+        System.out.println("ARP_Engine: received frame data on jack " + jack);
+        
         ARPPacket toProcess = new ARPPacket(frameData);
         //We received a request
         if( toProcess.getOper() == 1 ) {

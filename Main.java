@@ -118,6 +118,7 @@ public class Main {
                 System.out.println("Not a valid input, retry");
             
             }
+        
         }
     
         public static void commandHelp()
