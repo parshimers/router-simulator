@@ -101,6 +101,12 @@ public class Main {
                 long mac = Long.parseLong(in.readLine(),16);
                 rt.ethping(jack,mac);
             }
+            else if(userInput.equalsIgnoreCase("arp")){
+                System.out.print("jack: ");
+                int jack = Integer.parseInt(in.readLine());
+                System.out.println("target IP: ");
+                rt.findMAC(InetAddress.getByName(in.readLine()),jack);
+            }
 
             else if(userInput.equalsIgnoreCase("quit"))
                 quit = true;

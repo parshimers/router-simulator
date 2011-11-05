@@ -28,12 +28,14 @@ public class ARP_Engine implements EventRegistration {
                          toProcess.getSHA(), toProcess.getSPA(),jack );
         }
         //We received a response, so store the sender's MAC and IP
-        else if( toProcess.getOper() == 2 )
+        else if( toProcess.getOper() == 2 ){
             arpCache.put( toProcess.getSPA(), toProcess.getSHA() );
+            System.out.println("MISSION SUCCESSFUL");
+        }
         
     }
     
-    private void requestMAC( MACAddress sha, InetAddress spa, 
+    public void requestMAC( MACAddress sha, InetAddress spa, 
                              InetAddress tpa, int jack) {
 
         ARPPacket request = new ARPPacket(sha, spa, tpa);

@@ -230,13 +230,9 @@ public class Router extends Thread implements RouterHook {
         for(EtherPort e: ports)
             e.stopThreads();
     }
-    public static MACAddress findMacByIP(InetAddress tpa) {
-        for(EtherPort e: ports) {
-            if( e != null && e.getIP().equals(tpa) )
-                return e.getMAC();
-        }
-        
-        return null;
+    protected void findMAC( InetAddress tpa,int jack){
+        EtherPort eth = ports[jack];
+        arpEngine.requestMAC(eth.getMAC(),eth.getIP(),tpa,jack);
     }
     
     public EventRegistration getEventReg(short type) {

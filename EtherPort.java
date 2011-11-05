@@ -22,15 +22,16 @@ public class EtherPort {
     private boolean runThreads;
     private int mtu = 1500;
     /**
-        * Makes a new EtherPort, listening on the specified port, on all interfaces
+        * Makes a new EtherPort, listening on the specified port, 
+          on all interfaces
         * @param port The port to be listened on
         * @param jack The identifier for this interface 
         * @param src The MACAddress assigned to this interface
         * @param routerHook The callback pointer for this interface
     */
 
-    public EtherPort(int port, int jack,
-                     MACAddress src, RouterHook routerHook) throws SocketException{
+    public EtherPort(int port, int jack,MACAddress src, RouterHook routerHook) 
+                     throws SocketException{
         this.routerHook = routerHook;
         this.src = src;
         this.jack=jack;
@@ -40,8 +41,7 @@ public class EtherPort {
         startConnection();
     }
     /**
-        * Makes a new EtherPort, listening on the specified port, on a specified 
-          interface.
+        * Makes a new EtherPort, listening on the specified port, on a specified          interface.
         * @param port The port to be listened on
         * @param jack The identifier for this interface 
         * @param src The MACAddress assigned to this interface
@@ -218,12 +218,11 @@ public class EtherPort {
                     EventRegistration evt = 
                                routerHook.getEventReg(new Short(eth.getType()));
                     if( evt != null && 
-                          (eth.getDst().getLongAddress() == 
-                           src.getLongAddress() )    ) {
+                       (eth.getDst().getLongAddress()==src.getLongAddress())) {
                         evt.frameReceived(eth.getData(),jack);
                     }
                     else if(evt == null && 
-                            eth.getDst().getLongAddress() == src.getLongAddress()
+                            eth.getDst().getLongAddress()==src.getLongAddress()
                             && eth.getType() == (short)0x0801)
                     {
                         System.out.println(new String(eth.getData()));
@@ -304,10 +303,14 @@ public class EtherPort {
         this.nm = nm;
     }
     /**
+        *Gives the Maximum Transmission Unit for this link
     */
     protected int getMTU(){
         return mtu;
     }
+    /**
+        *Sets the Maxium Transmission Unit for this link
+    */
     protected void setMTU(int mtu){
         this.mtu = mtu;
     }
