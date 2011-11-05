@@ -21,6 +21,7 @@ public class EtherPort {
     private DatagramSocket sock;
     private HashMap<Short, EventRegistration> typeListen;
     private boolean runThreads;
+    private int mtu = 1500;
     /**
         * Makes a new EtherPort, listening on the specified port, on all interfaces
         * @param port The port to be listened on
@@ -215,7 +216,7 @@ public class EtherPort {
             try{
                 sock.receive(rcvd);
                 int len = rcvd.getLength();
-                if( buf[0]  == (byte) 'e' && 72<=len && len<=1526) {
+                if( buf[0]  == (byte) 'e' && 72<=len && len<=(mtu+26)) {
                     byte[] frame = new byte[rcvd.getLength()];
                     System.arraycopy(rcvd.getData(),0,frame,0,rcvd.getLength());
                     EtherFrame eth = parseFrame(frame);
@@ -309,6 +310,12 @@ public class EtherPort {
     }
     /**
     */
+    protected int getMTU(){
+        return mtu;
+    }
+    protected void setMTU(int mtu){
+        this.mtu = mtu;
+    }
     private short toShort(byte [] b){
         short sh=0;
         sh |= b[0] & 0xFF;
@@ -330,5 +337,6 @@ public class EtherPort {
         flipBits(flip);
         return buf.getInt(0);
    }
+
     
 }

@@ -26,9 +26,6 @@ public class ARP_Engine implements EventRegistration {
             if( arpCache.containsKey(tpa) )
                 respond( arpCache.get(tpa), toProcess.getTPA(),
                          toProcess.getSHA(), toProcess.getSPA(),jack );
-            else
-                requestMAC( toProcess.getSHA(), toProcess.getSPA(),
-                            toProcess.getTPA(),jack);
         }
         //We received a response, so store the sender's MAC and IP
         else if( toProcess.getOper() == 2 )
