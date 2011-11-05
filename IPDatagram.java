@@ -2,6 +2,7 @@
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
+import java.util.Collections;
 
 public class IPDatagram{
     private final byte vers,hlen;

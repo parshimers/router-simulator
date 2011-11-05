@@ -1,5 +1,6 @@
 
 import java.net.InetAddress;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -17,8 +18,11 @@ public class ARP_Engine implements EventRegistration {
     @Override
     public void frameReceived(byte[] frameData, int jack) {
         System.out.println("ARP_Engine: received frame data on jack " + jack);
+        System.out.println( Arrays.toString(frameData) );
         
         ARPPacket toProcess = new ARPPacket(frameData);
+        System.out.println( Arrays.toString( toProcess.toByteArray() ) );
+        
         //We received a request
         if( toProcess.getOper() == 1 ) {
             InetAddress tpa = toProcess.getTPA();
