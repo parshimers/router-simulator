@@ -6,7 +6,7 @@ import java.net.SocketException;
 
 public class Router extends Thread implements RouterHook {
     
-    private EtherPort[] ports;
+    private static EtherPort[] ports;
     private ARP_Engine arpEngine;
     private HashMap<InetAddress, RoutingTableEntry> routingTable;
     private int nextRealPortNum, nextIpSuffix;
@@ -225,6 +225,14 @@ public class Router extends Thread implements RouterHook {
     protected void stopAllPorts() {
         for(EtherPort e: ports)
             e.stopThreads();
+    }
+    public static MACAddress findMacByIP(InetAddress tpa) {
+        for(EtherPort e: ports) {
+            if( e != null && e.getIP().equals(tpa) )
+                return e.getMAC();
+        }
+        
+        return null;
     }
     
 }

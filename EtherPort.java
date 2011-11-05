@@ -104,6 +104,13 @@ public class EtherPort {
         return port;
     }
     /**
+     * Returns this EtherPort's virtual MAC address (always begins with E1
+     * for our group).
+     */
+    public MACAddress getMAC() {
+        return src;
+    }
+    /**
         * Specifies whether or not this interface has an endpoint currently.
     */
     public boolean hasEndpoint(){
