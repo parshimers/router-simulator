@@ -19,7 +19,6 @@ public class EtherPort {
     private NetMask nm;
     private MACAddress src;
     private DatagramSocket sock;
-    private HashMap<Short, EventRegistration> typeListen;
     private boolean runThreads;
     private int mtu = 1500;
     /**
@@ -38,7 +37,6 @@ public class EtherPort {
         this.port = port;
         sock = new DatagramSocket(port);
         outQueue = new LinkedBlockingQueue<DatagramPacket>();
-        typeListen = new HashMap<Short, EventRegistration>();
         startConnection();
     }
     /**
@@ -65,7 +63,6 @@ public class EtherPort {
             System.out.println("Could not establish socket on local port " 
                                 + port);
         }
-        typeListen = new HashMap<Short, EventRegistration>();
         outQueue = new LinkedBlockingQueue<DatagramPacket>();
         startConnection();
     }
@@ -117,28 +114,19 @@ public class EtherPort {
         return !(dstAddr == null);
     }
     /**
-        * Adds a callback for the specified ethernet type
-        * @param type The ethernet type to listen for
-        * @param evt The callback for the specified type
-    */
-    protected boolean addRegistration(short type, EventRegistration evt){
-        typeListen.put(new Short(type), evt);
-        return true;
-    }
-    /**
         * Parses a byte array into an EtherFrame
         * @param payload The byte array containing the frame 
     */
-    private EtherFrame parseFrame(byte[] payload) throws IOException{
+    private EtherFrame parseFrame(byte[] payload) throws IOException {
         ByteBuffer bb = ByteBuffer.wrap(payload);
         int fcs = bb.getInt(payload.length-4);
         flipBits(payload);
         long preambleSFD = bb.getLong();
-        MACAddress dst = new MACAddress(Arrays.copyOfRange(payload,9,15));
-        MACAddress src = new MACAddress(Arrays.copyOfRange(payload,15,21));
+        MACAddress dstAddrs = new MACAddress(Arrays.copyOfRange(payload,9,15));
+        MACAddress srcAddrs = new MACAddress(Arrays.copyOfRange(payload,15,21));
         short type = toShort(Arrays.copyOfRange(payload,21,24));
         byte[] data = Arrays.copyOfRange(payload,23,payload.length-4);
-        EtherFrame rcvdFrame = new EtherFrame(dst,src,type,data);
+        EtherFrame rcvdFrame = new EtherFrame(dstAddrs,srcAddrs,type,data);
         int crc = compCRC(Arrays.copyOfRange(payload,9,payload.length-4));
         if(crc != fcs) {
             System.out.println("Corrupt frame!");
@@ -227,8 +215,8 @@ public class EtherPort {
                     byte[] frame = new byte[rcvd.getLength()];
                     System.arraycopy(rcvd.getData(),0,frame,0,rcvd.getLength());
                     EtherFrame eth = parseFrame(frame);
-                    EventRegistration evt = typeListen.get(new Short(
-                                                           eth.getType()));
+                    EventRegistration evt = 
+                               routerHook.getEventReg(new Short(eth.getType()));
                     if( evt != null && 
                           (eth.getDst().getLongAddress() == 
                            src.getLongAddress() )    ) {

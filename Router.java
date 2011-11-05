@@ -1,6 +1,5 @@
 
 import java.net.InetAddress;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.net.SocketException;
 
@@ -8,7 +7,9 @@ public class Router extends Thread implements RouterHook {
     
     private static EtherPort[] ports;
     private ARP_Engine arpEngine;
+    private Routing_Engine routingEngine;
     private HashMap<InetAddress, RoutingTableEntry> routingTable;
+    private HashMap<Short, EventRegistration> typeListen;
     private int nextRealPortNum, nextIpSuffix;
     private long MACprefix;
 
@@ -18,6 +19,11 @@ public class Router extends Thread implements RouterHook {
         MACprefix = 0xE10000000000L;  //E1 = our group's prefix
         ports = new EtherPort[numPorts];
         arpEngine = new ARP_Engine(ports);
+        routingEngine = new Routing_Engine(routingTable);
+        typeListen = new HashMap<Short, EventRegistration>();
+        
+        typeListen.put((short) 0x0800, routingEngine);
+        typeListen.put((short) 0x0806, arpEngine);
     }
     @Override
     public void commandRcvd(char cmd, InetAddress remoteRealIP, 
@@ -194,15 +200,13 @@ public class Router extends Thread implements RouterHook {
         ePort.setNetMask( new NetMask(netMask) );
     }
     
-    protected void route( int jack, NetMask virtualNetMask,
-                       InetAddress virtualGatewayAddress ) {
+    protected void route( InetAddress virtualNetworkAddress, 
+                          NetMask virtualNetMask,
+                          InetAddress virtualGatewayAddress ) {
         
         //I could be wrong about how this part works, but I'm thinking we look
         //through our ports, see if any match the virtualGatewayAddress (the "target"),
         //and if so we are directly connected.
-        EtherPort ePort = ports[jack];
-        InetAddress virtualNetworkAddress = ePort.getIP();
-
         boolean isDirect = false;
         for( EtherPort e: ports ) {
             if( e != null && e.getIP().equals(virtualGatewayAddress) ) {
@@ -233,6 +237,10 @@ public class Router extends Thread implements RouterHook {
         }
         
         return null;
+    }
+    
+    public EventRegistration getEventReg(short type) {
+        return typeListen.get(type);
     }
     
 }

@@ -35,7 +35,7 @@ public class IPDatagram{
         this.options = options;
         this.data = data;
     }
-    public IPDatagram( byte[] data){        
+    public IPDatagram( byte[] data ){        
         ByteBuffer buf = ByteBuffer.wrap(data);
         byte ver_hlen = buf.get();
         vers = (byte)(ver_hlen >> 4); //high 4 bits 
