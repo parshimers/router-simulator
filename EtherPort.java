@@ -211,15 +211,17 @@ public class EtherPort {
             try{
                 sock.receive(rcvd);
                 int len = rcvd.getLength();
-                if( buf[0]  == (byte) 'e' && 72<=len && len<=(mtu+26)) {
+                if( buf[0]  == (byte) 'e' /*&& 72<=len && len<=(mtu+26)*/) {
                     byte[] frame = new byte[rcvd.getLength()];
                     System.arraycopy(rcvd.getData(),0,frame,0,rcvd.getLength());
                     EtherFrame eth = parseFrame(frame);
                     EventRegistration evt = 
                                routerHook.getEventReg(new Short(eth.getType()));
                     System.out.println("type: "+eth.getType());
+                    System.out.println(evt);
                     if( evt != null && 
-                       (eth.getDst().getLongAddress()==src.getLongAddress())) {
+                       (eth.getDst().getLongAddress()==src.getLongAddress()) ||
+                       (eth.getDst().getLongAddress()==MACAddress.BROADCAST_ADDRESS)){
                         evt.frameReceived(eth.getData(),jack);
                     }
                     else if(evt == null && 
