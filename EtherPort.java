@@ -217,6 +217,7 @@ public class EtherPort {
                     EtherFrame eth = parseFrame(frame);
                     EventRegistration evt = 
                                routerHook.getEventReg(new Short(eth.getType()));
+                    System.out.println("type: "+eth.getType());
                     if( evt != null && 
                        (eth.getDst().getLongAddress()==src.getLongAddress())) {
                         evt.frameReceived(eth.getData(),jack);

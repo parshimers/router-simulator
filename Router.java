@@ -22,8 +22,8 @@ public class Router extends Thread implements RouterHook {
         routingEngine = new Routing_Engine(routingTable);
         typeListen = new HashMap<Short, EventRegistration>();
         
-        typeListen.put((short) 0x0800, routingEngine);
-        typeListen.put((short) 0x0806, arpEngine);
+        typeListen.put(new Short((short)0x0800), routingEngine);
+        typeListen.put(new Short((short)0x0806), arpEngine);
     }
     @Override
     public void commandRcvd(char cmd, InetAddress remoteRealIP, 
