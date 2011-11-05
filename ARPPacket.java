@@ -1,4 +1,3 @@
-
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
 
@@ -22,33 +21,21 @@ public class ARPPacket{
         hlen = buf.get();
         plen = buf.get();
         oper = buf.getShort();
-        
-        byte[] shaBytes = new byte[6];
-        System.arraycopy(frameBytes, 8, shaBytes, 0, 6);
-        sha = new MACAddress(shaBytes);
-        
-        //InetAddress.getByAddress requires that the bytes be in reverse order
-        //(but nothing changes with the bits)
-        byte[] spaBytes = new byte[4];
-        spaBytes[0] = frameBytes[17];
-        spaBytes[1] = frameBytes[16];
-        spaBytes[2] = frameBytes[15];
-        spaBytes[3] = frameBytes[14];
+        byte[] shabyt = new byte[6];
+        byte[] spabyt = new byte[4];
+        byte[] thabyt = new byte[6];
+        byte[] tpabyt = new byte[4];
+        buf.get(shabyt,0,6);
+        buf.get(spabyt,0,4);
+        buf.get(thabyt,0,6);
+        buf.get(tpabyt,0,4);
+        sha = new MACAddress(shabyt);
         try {
-            spa = InetAddress.getByAddress(spaBytes);
+            spa = InetAddress.getByAddress(spabyt);
         } catch(Exception e) {}
-        
-        byte[] thaBytes = new byte[6];
-        System.arraycopy(frameBytes, 18, thaBytes, 0, 6);
-        tha = new MACAddress(thaBytes);
-        
-        byte[] tpaBytes = new byte[4];
-        tpaBytes[0] = frameBytes[27];
-        tpaBytes[1] = frameBytes[26];
-        tpaBytes[2] = frameBytes[25];
-        tpaBytes[3] = frameBytes[24];
+        tha = new MACAddress(thabyt);
         try {
-            tpa = InetAddress.getByAddress(tpaBytes);
+            tpa = InetAddress.getByAddress(tpabyt);
         } catch(Exception e) {}
         
     }

@@ -2,6 +2,7 @@
 import java.net.InetAddress;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Arrays;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class ARP_Engine implements EventRegistration {
@@ -45,6 +46,7 @@ public class ARP_Engine implements EventRegistration {
         ARPPacket request = new ARPPacket(sha, spa, tpa);
         EtherPort eth = ports[jack];
         eth.enqueueFrame(new MACAddress(),(short)0x0806,request.toByteArray());
+        System.out.println(Arrays.toString(request.toByteArray()));
     }
     //Mystery router's MAC/IP are sha/spa.
     //The computer we're responding to (who made the original
