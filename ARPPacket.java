@@ -73,33 +73,8 @@ public class ARPPacket{
         else
             tpaBytes = new byte[]{ 0, 0, 0, 0 };
         buf.put(tpaBytes);
-        
-        
-//        bytes[0] = (byte) ( 0xFF00 & htype );
-//        bytes[1] = (byte) ((0x00FF & htype) >> 8);
-//        bytes[2] = (byte) ( 0xFF00 & ptype );
-//        bytes[3] = (byte) ((0x00FF & ptype) >> 8);
-//        bytes[4] = hlen;
-//        bytes[5] = plen;
-//        bytes[6] = (byte) ( 0xFF00 & oper );
-//        bytes[7] = (byte) ((0x00FF & oper) >> 8);
-//        
-//        byte[] shaBytes = sha.getByteAddress();
-//        System.arraycopy(shaBytes, 0, bytes, 8, 6);
-//        byte[] spaBytes = spa.getAddress();
-//        System.arraycopy(spaBytes, 0, bytes, 14, 4);
-//        byte[] thaBytes = tha.getByteAddress();
-//        System.arraycopy(thaBytes, 0, bytes, 18, 6);
-//        if( tpa != null ) {
-//            byte[] tpaBytes = tpa.getAddress();
-//            System.arraycopy(tpaBytes, 0, bytes, 24, 4);
-//        }
-//        else {
-//            byte[] empty = {0,0,0,0};
-//            System.arraycopy(empty, 0, bytes, 24, 4);
-//        } 
                
-        return bytes;
+        return buf.array();
     }
     
     public short getOper(){return oper;};

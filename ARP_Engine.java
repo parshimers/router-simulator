@@ -1,9 +1,7 @@
 
 import java.net.InetAddress;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Arrays;
-import java.util.concurrent.LinkedBlockingQueue;
 
 public class ARP_Engine implements EventRegistration {
     
@@ -60,6 +58,10 @@ public class ARP_Engine implements EventRegistration {
         ARPPacket response = new ARPPacket(sha,spa,tha,tpa); 
         EtherPort eth = ports[jack];
         eth.enqueueFrame(new MACAddress(),(short)0x0806,response.toByteArray());
+    }
+    
+    public void addToCache(InetAddress localIP, int localVirtualPort) {
+        arpCache.put( localIP, ports[localVirtualPort].getMAC() );
     }
     
 }

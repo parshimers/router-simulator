@@ -198,6 +198,7 @@ public class Router extends Thread implements RouterHook {
         EtherPort ePort = ports[localVirtualPort];
         ePort.setIP(localIP);
         ePort.setNetMask( new NetMask(netMask) );
+        arpEngine.addToCache(localIP, localVirtualPort);
     }
     
     protected void route( InetAddress virtualNetworkAddress, 
