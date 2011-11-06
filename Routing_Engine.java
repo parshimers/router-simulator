@@ -1,5 +1,6 @@
 
 import java.net.InetAddress;
+import java.io.IOException;
 import java.util.HashMap;
 
 public class Routing_Engine implements EventRegistration {
@@ -12,11 +13,15 @@ public class Routing_Engine implements EventRegistration {
     
     @Override
     public void frameReceived(byte[] bytes, int jack) {
-        IPDatagram datagram = new IPDatagram(bytes);
+        IPDatagram datagram = null;
+        try {
+            datagram = new IPDatagram(bytes);
+        } catch( IOException ioe ) {
+            System.out.println("Corrupt frame received.");
+        }
         
         InetAddress dest = datagram.getDst();
         //apply the routing algorithm
-        
         
         //note: Wiegley said have to be able to handle IP datagram fragments.
         //Should only matter if our router is the final destination.

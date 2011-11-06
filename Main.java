@@ -107,6 +107,12 @@ public class Main {
                 System.out.println("target IP: ");
                 rt.findMAC(InetAddress.getByName(in.readLine()),jack);
             }
+            else if(userInput.equalsIgnoreCase("ipping")){
+                System.out.print("jack: ");
+                int jack = Integer.parseInt(in.readLine());
+                System.out.println("target IP: ");
+                rt.findMAC(InetAddress.getByName(in.readLine()),jack);
+            }
 
             else if(userInput.equalsIgnoreCase("quit"))
                 quit = true;
