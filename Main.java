@@ -44,6 +44,99 @@ public class Main {
                 int port = Integer.parseInt(realPort);
                 rt.connect(jack,dst,port);
             }
+            else if(userInput.equalsIgnoreCase("run"))
+            {
+                try {
+                    /* Change Filepath here  */
+                    FileReader fr = new FileReader("C:/Users/Drake/School/Comp 429/data.txt");
+                    BufferedReader br = new BufferedReader(fr); 
+                    String strLine;
+                        while ((strLine = br.readLine())!= null)
+                        {
+                            strLine = br.readLine();
+                            if (strLine.equalsIgnoreCase("connect"))
+                            {
+                                System.out.println("connect");
+                                System.out.println("<virtual port number>: ");
+                                virtualPort = br.readLine();
+                                System.out.println(virtualPort);
+                                System.out.println("<real ip address> :");
+                                realIp = br.readLine();
+                                System.out.println(realIp);
+                                System.out.println("<real port address> :");
+                                realPort = br.readLine();
+                                System.out.println(realPort);
+                                int jack = Integer.parseInt(virtualPort);
+                                InetAddress dst = InetAddress.getByName(realIp);
+                                int port = Integer.parseInt(realPort);
+                                rt.connect(jack,dst,port);
+                                System.out.println();
+                            }
+                             else if (strLine.equalsIgnoreCase("ip"))
+                            {
+                                System.out.println("ip");
+                                System.out.println("<virtual port number> : ");
+                                virtualPort = br.readLine();
+                                System.out.println(virtualPort);
+                                System.out.println("<virtual ip address> : ");
+                                virtualIp = br.readLine();
+                                System.out.println(virtualIp);
+                                System.out.println("<virtual net mask> : " );
+                                virtualMask = br.readLine();
+                                System.out.println(virtualMask);
+                                int jack = Integer.parseInt(virtualPort);
+                                InetAddress ip = InetAddress.getByName(virtualIp);
+                                rt.ip(jack,ip,virtualMask);
+                                System.out.println();
+                            }
+                             else if (strLine.equalsIgnoreCase("disconnect"))
+                            {
+                                System.out.println("disconnect");
+                                System.out.println("<virtual port number> : ");
+                                virtualPort = br.readLine();
+                                System.out.println(virtualPort);
+                                int jack = Integer.parseInt(virtualPort);
+                                rt.disconnect(jack);
+                                System.out.println();
+                            }
+                            else if (strLine.equalsIgnoreCase("listen"))
+                            {
+                                System.out.println("listen");
+                                System.out.println("<virtual port number> : ");
+                                virtualPort = br.readLine();
+                                System.out.println(virtualPort);
+                                System.out.println("<real port number> ");
+                                realPort = br.readLine();
+                                System.out.println(realPort);
+                                int jack = Integer.parseInt(virtualPort);
+                                int port = Integer.parseInt(realPort);
+                                rt.listen(jack,port);
+                                System.out.println();
+                            }
+                            else if (strLine.equalsIgnoreCase("route"))
+                            {
+                                System.out.println("route");
+                                System.out.println("<virtual network number> : ");
+                                InetAddress vna = InetAddress.getByName(br.readLine());
+                                System.out.println(vna);
+                                System.out.println("<virtual net mask> : ");
+                                virtualMask = br.readLine();
+                                System.out.println(virtualMask);
+                                System.out.println("<virtual gateway address> : ");
+                                virtualGate = br.readLine();
+                                System.out.println(virtualGate);
+                                NetMask nm = new NetMask(virtualMask);
+                                InetAddress gw = InetAddress.getByName(virtualGate);
+                                rt.route(vna,nm,gw);
+                                System.out.println();
+                            }
+                        }
+                        fr.close();
+                      }
+                    catch (Exception e){
+                        System.err.println("Error: " + e.getMessage());
+                    }
+                }
 
             else if(userInput.equalsIgnoreCase("listen"))
             {
