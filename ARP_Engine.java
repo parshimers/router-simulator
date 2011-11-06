@@ -21,19 +21,20 @@ public class ARP_Engine implements EventRegistration {
         
         ARPPacket toProcess = new ARPPacket(frameData);
         System.out.println( Arrays.toString( toProcess.toByteArray() ) );
+        System.out.println(toProcess.getOper() == 1);
         
         //We received a request
-        if( toProcess.getOper() == 1 ) {
+        if( toProcess.getOper() == (short)1 ) {
             InetAddress tpa = toProcess.getTPA();
             
             if( arpCache.containsKey(tpa) )
                 respond( arpCache.get(tpa), toProcess.getTPA(),
                          toProcess.getSHA(), toProcess.getSPA(),jack );
+            System.out.println("MISSION SUCCESSFUL");
         }
         //We received a response, so store the sender's MAC and IP
-        else if( toProcess.getOper() == 2 ){
+        else if( toProcess.getOper() == (short)2 ){
             arpCache.put( toProcess.getSPA(), toProcess.getSHA() );
-            System.out.println("MISSION SUCCESSFUL");
         }
         
     }

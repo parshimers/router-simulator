@@ -1,14 +1,16 @@
+import java.net.InetAddress;
 
 public class NetMask {
     
-    private int maskData;
+    private InetAddress mask;
     
     public NetMask(String maskString) {   
-        maskData = RoutingTableEntry.ipToBinaryInt(maskString);
+        try{
+            mask = InetAddress.getByName(maskString);
+        }
+        catch(Exception e){}
     }
-    
-    public int getMask() {
-        return maskData;
+    public byte[] getMask() {
+        return mask.getAddress();
     }
-    
 }
